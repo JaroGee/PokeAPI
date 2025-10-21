@@ -15,28 +15,43 @@ Easy to extend, build your own battle sim, web app, or terminal Pokédex
 **Requirements**
 Python 3.8+
 requests library
+
 Install it with:
+```bash
 pip install requests
 
 **Usage**
-Run the script:
+1. Clone this repository:
+```bash
+git clone https://github.com/<your-username>/<your-repo-name>.git
+cd <your-repo-name>
+
+2. Run the script:
+```bash
 python pokeapi.py
-When prompted, type the name of a Pokémon:
-> pikachu
-Get results like:
+
+3. When prompted, type the name of a Pokémon:
+```bash
+pikachu
+
+4. Get results like:
+```yami
 ⚡ Name: Pikachu
 🧬 ID: 25
 🥊 Type: electric
 💪 Base HP: 35
+
 🧪 Example Output
+```yami
 $ python pokeapi.py
 Enter a Pokémon name: bulbasaur
-
 🌿 Name: Bulbasaur
 🧬 ID: 1
 🥊 Type: grass / poison
 💪 Base HP: 45
+
 🧩 Project Structure
+```bash
 pokeapi/
 │
 ├── pokeapi.py      # Main script that calls the API
