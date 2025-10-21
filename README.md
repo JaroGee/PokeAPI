@@ -1,21 +1,18 @@
 **PokeAPI Python Project**
 
 **Overview**
-
 This project is a small Python script that connects to the PokéAPI
 A free, open RESTful Pokémon API
 Lets you fetch and display data about your favourite Pokémon.
 Think of it as your personal Pokédex, minus the Professor Oak lectures.
 
 **Features**
-
 Fetch Pokémon info (name, ID, type, abilities, stats, etc.)
 Command-line interface (because GUI is for gym trainers, not coders)
 JSON-parsed results displayed in a readable format
 Easy to extend, build your own battle sim, web app, or terminal Pokédex
 
 **Requirements**
-
 Python 3.8+
 requests library
 
@@ -26,7 +23,6 @@ pip install requests
 
 
 **Usage**
-
 1. Clone this repository:
 ```bash
 git clone https://github.com/<your-username>/<your-repo-name>.git
@@ -70,10 +66,4 @@ pokeapi/
 └── requirements.txt (optional)
 ```
 
-**Why**
-
-Because Pokémon + Python = happiness.
-
-**Author**
-
-**Jaro Gee**
+**Author: Jaro Gee**
