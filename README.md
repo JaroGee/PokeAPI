@@ -1,14 +1,16 @@
 **PokeAPI Python Project**
 
 **Overview**
-This project is a small Python script that connects to the PokéAPI — a free, open RESTful Pokémon API — and lets you fetch and display data about your favourite Pokémon.
+This project is a small Python script that connects to the PokéAPI
+A free, open RESTful Pokémon API
+Lets you fetch and display data about your favourite Pokémon.
 Think of it as your personal Pokédex, minus the Professor Oak lectures.
 
 **Features**
 Fetch Pokémon info (name, ID, type, abilities, stats, etc.)
 Command-line interface (because GUI is for gym trainers, not coders)
 JSON-parsed results displayed in a readable format
-Easy to extend — build your own battle sim, web app, or terminal Pokédex
+Easy to extend, build your own battle sim, web app, or terminal Pokédex
 
 **Requirements**
 Python 3.8+
@@ -17,9 +19,6 @@ Install it with:
 pip install requests
 
 **Usage**
-Clone this repository:
-git clone https://github.com/<your-username>/<your-repo-name>.git
-cd <your-repo-name>
 Run the script:
 python pokeapi.py
 When prompted, type the name of a Pokémon:
@@ -46,7 +45,6 @@ pokeapi/
 
 **Why**
 Because Pokémon + Python = happiness.
-Also, APIs are the perfect way to pretend you're coding when you're really just browsing the internet for Charmander stats.
 
 **Author**
 **Jaro Gee**
