@@ -19,20 +19,25 @@ requests library
 Install it with:
 ```bash
 pip install requests
+```
+
 
 **Usage**
 1. Clone this repository:
 ```bash
 git clone https://github.com/<your-username>/<your-repo-name>.git
 cd <your-repo-name>
+```
 
 2. Run the script:
 ```bash
 python pokeapi.py
+```
 
 3. When prompted, type the name of a Pokémon:
 ```bash
 pikachu
+```
 
 4. Get results like:
 ```yami
@@ -40,6 +45,7 @@ pikachu
 🧬 ID: 25
 🥊 Type: electric
 💪 Base HP: 35
+```
 
 🧪 Example Output
 ```yami
@@ -49,6 +55,7 @@ Enter a Pokémon name: bulbasaur
 🧬 ID: 1
 🥊 Type: grass / poison
 💪 Base HP: 45
+```
 
 🧩 Project Structure
 ```bash
@@ -57,6 +64,7 @@ pokeapi/
 ├── pokeapi.py      # Main script that calls the API
 ├── README.md       # You’re reading it right now
 └── requirements.txt (optional)
+```
 
 **Why**
 Because Pokémon + Python = happiness.
