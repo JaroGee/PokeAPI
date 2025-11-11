@@ -321,7 +321,7 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
     assets_dir = base_path / "static" / "assets"
-    favicon_path = assets_dir / "pokeapi_256.png"
+    favicon_path = assets_dir / "pokesearch_favicon.png"
 
     st.set_page_config(
         page_title="PokéSearch!",
