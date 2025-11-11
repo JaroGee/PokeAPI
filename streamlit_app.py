@@ -9,7 +9,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Sequence, Iterable, Tuple
+from typing import Dict, List, Sequence, Iterable, Tuple, Set
 from difflib import get_close_matches
 
 import streamlit as st
@@ -208,6 +208,36 @@ def load_file_as_base64(path: Path) -> str | None:
         return None
 
 
+def asset_search_paths(filename: str, base_path: Path | None = None) -> List[Path]:
+    base = base_path or Path(__file__).parent
+    roots = [base]
+    cwd = Path.cwd()
+    if cwd != base:
+        roots.append(cwd)
+    candidates: List[Path] = []
+    seen: Set[Path] = set()
+    for root in roots:
+        for path in (
+            root / "static" / "assets" / filename,
+            root / "static" / filename,
+            root / "assets" / filename,
+            root / "Assets" / filename,
+            root / filename,
+        ):
+            if path in seen:
+                continue
+            candidates.append(path)
+            seen.add(path)
+    return candidates
+
+
+def resolve_asset_path(filename: str, base_path: Path | None = None) -> Path | None:
+    for path in asset_search_paths(filename, base_path):
+        if path.exists():
+            return path
+    return None
+
+
 def ensure_state() -> None:
     if "history" not in st.session_state:
         st.session_state["history"] = []
@@ -320,23 +350,15 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    assets_dir = base_path / "static" / "assets"
-    favicon_path = assets_dir / "pokesearch_favicon.png"
+    favicon_path = resolve_asset_path("pokesearch_favicon.png", base_path)
 
     st.set_page_config(
         page_title="PokéSearch!",
-        page_icon=str(favicon_path) if favicon_path.exists() else "️🔎",
+        page_icon=str(favicon_path) if favicon_path else "️🔎",
         layout="wide",
         initial_sidebar_state="collapsed",
     )
 
-    def _asset_search_list(filename: str) -> List[Path]:
-        return [
-            assets_dir / filename,
-            (base_path / "assets") / filename,
-            (base_path / "Assets") / filename,
-            base_path / filename,
-        ]
     candidate_names = [
         "pokesearch_bg.jpeg",
         "pokesearch_bg.jpg",
@@ -354,13 +376,14 @@ def set_page_metadata() -> Dict[str, str]:
     ]
     candidates: List[Path] = []
     for name in candidate_names:
-        candidates.extend(_asset_search_list(name))
+        candidates.extend(asset_search_paths(name, base_path))
     bg_image, bg_mime = _load_first_image_base64(candidates)
     # Cursor image prefers PNG for better browser support; falls back to JPEG.
     cursor_image, cursor_mime = _load_first_image_base64(
-        _asset_search_list("pokeball.png") + _asset_search_list("pokeball.jpeg")
+        asset_search_paths("pokeball.png", base_path) + asset_search_paths("pokeball.jpeg", base_path)
     )
-    pokeapi_logo = load_file_as_base64(assets_dir / "pokeapi_256.png")
+    pokeapi_logo_path = resolve_asset_path("pokeapi_256.png", base_path)
+    pokeapi_logo = load_file_as_base64(pokeapi_logo_path) if pokeapi_logo_path else None
     cursor_style = (
         f'cursor: url("data:{cursor_mime};base64,{cursor_image}") 16 16, auto !important;'
         if cursor_image
@@ -536,20 +559,30 @@ def set_page_metadata() -> Dict[str, str]:
       .stTextInput div[data-testid="InputInstructions"] {{
         display: none !important;
       }}
-      input[data-baseweb="input"] {{
+      [data-testid="stTextInputRootElement"][data-baseweb="input"] {{
         background: linear-gradient(135deg, rgba(255, 107, 107, 0.95), rgba(255, 222, 0, 0.95)) !important;
-        color: #1d1d1f !important;
         border-radius: 20px !important;
         border: 2px solid rgba(255, 255, 255, 0.55) !important;
-        min-height: 58px;
-        padding: 0.7rem 1.2rem !important;
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+        min-height: 58px;
+        overflow: hidden;
       }}
-      input[data-baseweb="input"]:focus {{
+      [data-testid="stTextInputRootElement"][data-baseweb="input"]:focus-within {{
         border-color: #ffffff !important;
         box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55) !important;
       }}
-      input[data-baseweb="input"]::placeholder {{
+      [data-testid="stTextInputRootElement"][data-baseweb="input"] > div[data-baseweb="base-input"] {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+      }}
+      [data-testid="stTextInputRootElement"][data-baseweb="input"] input {{
+        background: transparent !important;
+        color: #1d1d1f !important;
+        min-height: 58px;
+        padding: 0.7rem 1.2rem !important;
+      }}
+      [data-testid="stTextInputRootElement"][data-baseweb="input"] input::placeholder {{
         color: rgba(255,255,255,0.95) !important;
       }}
       div[aria-live="polite"],
@@ -1289,15 +1322,20 @@ def main() -> None:
     left_col, right_col = st.columns([1, 2], gap="large", vertical_alignment="top")
 
     with left_col:
-        logo_path = base_path / "static" / "assets" / "PokeSearch_logo.png"
-        logo_b64 = load_file_as_base64(logo_path)
+        logo_path = resolve_asset_path("PokeSearch_logo.png", base_path)
+        logo_b64 = load_file_as_base64(logo_path) if logo_path else None
         if logo_b64:
             st.markdown(
                 f'<div class="logo-wrapper"><img src="data:image/png;base64,{logo_b64}" alt="Pokémon logo" /></div>',
                 unsafe_allow_html=True,
             )
-        else:
+        elif logo_path:
             st.image(str(logo_path), use_container_width=True)
+        else:
+            st.markdown(
+                '<div class="logo-wrapper"><h1>PokéSearch!</h1></div>',
+                unsafe_allow_html=True,
+            )
         pod = pokemon_of_the_day()
         if pod:
             sprite = pod.get("sprite") or _pokemon_icon_url(pod.get("name", ""))
