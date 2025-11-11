@@ -620,6 +620,11 @@ def set_page_metadata() -> Dict[str, str]:
         font-weight: 700;
         color: #3b4cca;
       }}
+      .pod-divider {{
+        border-top: 2px solid #000000;
+        margin: 0.75rem 0 1.25rem;
+        width: 100%;
+      }}
       @media (max-width: 640px) {{
         #random-pokemon {{
           height: 70px;
@@ -697,26 +702,6 @@ def set_page_metadata() -> Dict[str, str]:
         width: 52px;
         height: 52px;
         margin-bottom: 0.25rem;
-      }}
-      .reset-search-btn {{
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 0.15rem;
-      }}
-      .reset-search-btn .stButton>button {{
-        background: rgba(255, 255, 255, 0.9) !important;
-        border: 1px solid rgba(59, 76, 202, 0.25) !important;
-        color: var(--poke-blue) !important;
-        font-weight: 600 !important;
-        padding: 0.25rem 0.75rem !important;
-        min-height: 0 !important;
-        box-shadow: none !important;
-        border-radius: 999px !important;
-        font-size: 0.78rem;
-      }}
-      .reset-search-btn .stButton>button:hover {{
-        color: var(--poke-dark-red) !important;
-        border-color: rgba(59, 76, 202, 0.45) !important;
       }}
       .evo-name {{
         font-weight: 700;
@@ -1351,12 +1336,13 @@ def main() -> None:
                 ''',
                 unsafe_allow_html=True,
             )
-            if st.button("View details", key="pod_cta"):
+            if st.button("View stats", key="pod_cta"):
                 st.session_state["pending_lookup_id"] = pod.get("id")
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
                 st.session_state["enter_submit"] = True
                 st.rerun()
+        st.markdown('<div class="pod-divider"></div>', unsafe_allow_html=True)
         with st.container():
             pending_lookup_id = st.session_state.get("pending_lookup_id")
             pending_lookup_trigger = False
@@ -1386,13 +1372,26 @@ def main() -> None:
                 autocomplete="off",
                 on_change=_mark_enter_submit,
             )
-            st.markdown('<div class="reset-search-btn">', unsafe_allow_html=True)
-            reset_clicked = st.button(
-                "Clear search",
-                key="clear_search",
-                disabled=not bool(search_value),
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
+            search_cols = st.columns(3, gap="small")
+            with search_cols[0]:
+                search_clicked = st.button(
+                    "Search",
+                    use_container_width=True,
+                    key="search_submit",
+                )
+            with search_cols[1]:
+                random_clicked = st.button(
+                    "Random",
+                    use_container_width=True,
+                    key="random_submit",
+                )
+            with search_cols[2]:
+                reset_clicked = st.button(
+                    "Clear",
+                    use_container_width=True,
+                    key="clear_search",
+                    disabled=not bool(search_value),
+                )
             if reset_clicked:
                 st.session_state["search_prefill"] = ""
                 st.session_state["search_query"] = ""
@@ -1536,20 +1535,6 @@ def main() -> None:
 
             attach_search_suggestions(suggestion_payload)
 
-            with st.container():
-                button_col1, button_col2 = st.columns(2, gap="medium")
-                with button_col1:
-                    search_clicked = st.button(
-                        "Search",
-                        use_container_width=True,
-                        key="search_submit",
-                    )
-                with button_col2:
-                    random_clicked = st.button(
-                        "Random",
-                        use_container_width=True,
-                        key="random_submit",
-                    )
     if st.session_state.get("enter_submit"):
         search_clicked = True
         st.session_state["enter_submit"] = False
