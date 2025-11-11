@@ -1336,7 +1336,7 @@ def main() -> None:
                 ''',
                 unsafe_allow_html=True,
             )
-            if st.button("View stats", key="pod_cta"):
+            if st.button("View Stats", key="pod_cta"):
                 st.session_state["pending_lookup_id"] = pod.get("id")
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
@@ -1424,7 +1424,7 @@ def main() -> None:
             if history_entries:
                 history_tokens.append(history_clear)
                 history_labels[history_clear] = "Clear history"
-            history_label = "Search history"
+            history_label = "Search History"
             st.markdown('<div class="history-select-wrapper">', unsafe_allow_html=True)
             history_choice = st.selectbox(
                 history_label,
