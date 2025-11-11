@@ -1,0 +1,4 @@
+streamlit
+# Optional: only needed to run the Flask API in PokeAPI/PokeAPI.py
+flask
+requests

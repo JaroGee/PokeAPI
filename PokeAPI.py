@@ -5,7 +5,13 @@ import re
 from dataclasses import dataclass
 from typing import Callable, Dict, Iterable, List, Tuple
 
-from flask import Flask, jsonify, render_template, request
+# Note: Flask is optional for consumers that only need data/utilities (e.g., Streamlit app).
+# Import Flask lazily so this module can be imported without Flask installed.
+try:
+    from flask import Flask, jsonify, render_template, request  # type: ignore
+except Exception:  # pragma: no cover - environment without Flask
+    Flask = None  # type: ignore
+    jsonify = render_template = request = None  # type: ignore[misc,assignment]
 
 
 @dataclass(frozen=True)
@@ -32,13 +38,13 @@ CATEGORY_ORDER: Tuple[str, ...] = (
     "Growth Rates",
     "Natures",
     "Pokeathlon Stats",
-    "Pokemon",
-    "Pokemon Location Areas",
-    "Pokemon Colors",
-    "Pokemon Forms",
-    "Pokemon Habitats",
-    "Pokemon Shapes",
-    "Pokemon Species",
+    "Pokémon",
+    "Pokémon Location Areas",
+    "Pokémon Colors",
+    "Pokémon Forms",
+    "Pokémon Habitats",
+    "Pokémon Shapes",
+    "Pokémon Species",
     "Stats",
     "Types",
     "Evolution",
@@ -78,13 +84,13 @@ DATASET: Tuple[Entry, ...] = (
             Section("Growth Rates", ("Medium Fast",)),
             Section("Natures", ("Jolly", "Timid", "Hasty")),
             Section("Pokeathlon Stats", ("Speed ★★★★☆", "Skill ★★★☆☆", "Jump ★★★☆☆")),
-            Section("Pokemon", ("National Dex: #025", "Base Friendship: 70")),
-            Section("Pokemon Location Areas", ("Viridian Forest (Kanto)", "Hau'oli City (Alola)")),
-            Section("Pokemon Colors", ("Yellow",)),
-            Section("Pokemon Forms", ("Standard", "Cosplay", "Partner Cap")),
-            Section("Pokemon Habitats", ("Forest",)),
-            Section("Pokemon Shapes", ("Quadruped silhouette",)),
-            Section("Pokemon Species", ("Mouse Pokémon",)),
+            Section("Pokémon", ("National Dex: #025", "Base Friendship: 70")),
+            Section("Pokémon Location Areas", ("Viridian Forest (Kanto)", "Hau'oli City (Alola)")),
+            Section("Pokémon Colors", ("Yellow",)),
+            Section("Pokémon Forms", ("Standard", "Cosplay", "Partner Cap")),
+            Section("Pokémon Habitats", ("Forest",)),
+            Section("Pokémon Shapes", ("Quadruped silhouette",)),
+            Section("Pokémon Species", ("Mouse Pokémon",)),
             Section("Stats", ("HP: 35", "Atk: 55", "Sp.Atk: 50", "Spd: 90")),
             Section("Types", ("Electric",)),
             Section("Evolution", ("Pichu → Pikachu → Raichu/Alolan Raichu",)),
@@ -121,13 +127,13 @@ DATASET: Tuple[Entry, ...] = (
             Section("Growth Rates", ("Medium Fast",)),
             Section("Natures", ("Modest", "Calm", "Relaxed")),
             Section("Pokeathlon Stats", ("Skill ★★★☆☆", "Stamina ★★☆☆☆", "Jump ★★☆☆☆")),
-            Section("Pokemon", ("National Dex: #132", "Base Friendship: 70")),
-            Section("Pokemon Location Areas", ("Pokémon Mansion (Kanto)", "Lake of Outrage (Galar)")),
-            Section("Pokemon Colors", ("Purple",)),
-            Section("Pokemon Forms", ("Standard Transform",)),
-            Section("Pokemon Habitats", ("Urban ruins",)),
-            Section("Pokemon Shapes", ("Amorphous",)),
-            Section("Pokemon Species", ("Transform Pokémon",)),
+            Section("Pokémon", ("National Dex: #132", "Base Friendship: 70")),
+            Section("Pokémon Location Areas", ("Pokémon Mansion (Kanto)", "Lake of Outrage (Galar)")),
+            Section("Pokémon Colors", ("Purple",)),
+            Section("Pokémon Forms", ("Standard Transform",)),
+            Section("Pokémon Habitats", ("Urban ruins",)),
+            Section("Pokémon Shapes", ("Amorphous",)),
+            Section("Pokémon Species", ("Transform Pokémon",)),
             Section("Stats", ("HP: 48", "Atk: 48", "Def: 48", "Spd: 48")),
             Section("Types", ("Normal",)),
             Section("Evolution", ("No evolutions",)),
@@ -163,13 +169,13 @@ DATASET: Tuple[Entry, ...] = (
             Section("Growth Rates", ("Medium Slow",)),
             Section("Natures", ("Calm", "Bold", "Modest")),
             Section("Pokeathlon Stats", ("Stamina ★★★★☆", "Skill ★★★☆☆")),
-            Section("Pokemon", ("National Dex: #001", "Base Friendship: 70")),
-            Section("Pokemon Location Areas", ("Starter selection (Kanto)", "Hidden Grotto (Unova)")),
-            Section("Pokemon Colors", ("Green",)),
-            Section("Pokemon Forms", ("Standard",)),
-            Section("Pokemon Habitats", ("Grassland",)),
-            Section("Pokemon Shapes", ("Quadruped",)),
-            Section("Pokemon Species", ("Seed Pokémon",)),
+            Section("Pokémon", ("National Dex: #001", "Base Friendship: 70")),
+            Section("Pokémon Location Areas", ("Starter selection (Kanto)", "Hidden Grotto (Unova)")),
+            Section("Pokémon Colors", ("Green",)),
+            Section("Pokémon Forms", ("Standard",)),
+            Section("Pokémon Habitats", ("Grassland",)),
+            Section("Pokémon Shapes", ("Quadruped",)),
+            Section("Pokémon Species", ("Seed Pokémon",)),
             Section("Stats", ("HP: 45", "Atk: 49", "Sp.Atk: 65", "Spd: 45")),
             Section("Types", ("Grass", "Poison")),
             Section("Evolution", ("Bulbasaur → Ivysaur → Venusaur",)),
@@ -272,9 +278,9 @@ DATASET: Tuple[Entry, ...] = (
             Section("Regions", ("Starter region of Red/Blue", "Connected to Johto via Indigo Plateau")),
             Section("Locations", ("Pallet Town", "Cerulean City", "Power Plant")),
             Section("Location Areas", ("Route 1", "Viridian Forest", "Seafoam Islands")),
-            Section("Pokemon Habitats", ("Forest", "Mountain", "Sea", "Urban")),
-            Section("Pokemon Location Areas", ("Viridian Forest swarms", "Power Plant electric nests")),
-            Section("Pokemon Colors", ("Varied palette across habitats",)),
+            Section("Pokémon Habitats", ("Forest", "Mountain", "Sea", "Urban")),
+            Section("Pokémon Location Areas", ("Viridian Forest swarms", "Power Plant electric nests")),
+            Section("Pokémon Colors", ("Varied palette across habitats",)),
             Section("Characteristics", ("Inspired by Japanese Kanto region",)),
             Section("Encounter Methods", ("Fishing", "Surfing", "Tall grass encounters")),
             Section("Encounter Conditions", ("Time: Day/Night variant spawns in later gens",)),
@@ -293,7 +299,11 @@ SORT_STRATEGIES: Dict[str, Callable[[Entry], object]] = {
     "dex": lambda entry: entry.index,
 }
 
-app = Flask(__name__)
+# Flask app and routes are only defined if Flask is available in the environment.
+if Flask:  # type: ignore
+    app = Flask(__name__)
+else:  # pragma: no cover - allow importing without Flask installed
+    app = None
 
 
 def parse_query(raw_query: str | None) -> Tuple[str, Dict[str, str]]:
@@ -342,11 +352,9 @@ def apply_filters(
 
     if query:
         needle = query.lower()
-        filtered = [
-            entry
-            for entry in filtered
-            if any(needle in text.lower() for text in entry_text_nodes(entry))
-        ]
+        # Restrict matching to the entry name for stricter search semantics
+        name_hits = [entry for entry in filtered if needle in entry.name.lower()]
+        filtered = name_hits
 
     sort_hint = shortcuts.get("sort", "").lower()
     sort_fn = SORT_STRATEGIES.get(sort_hint) if sort_hint else None
@@ -374,39 +382,39 @@ def serialize_entry(entry: Entry) -> Dict[str, object]:
     }
 
 
-@app.get("/")
-def index():
-    return render_template("index.html", category_options=CATEGORY_OPTIONS)
+if Flask:
 
+    @app.get("/")
+    def index() -> str:
+        return render_template("index.html", category_options=CATEGORY_OPTIONS)
 
-@app.get("/api/suggestions")
-def suggestions():
-    raw_query = request.args.get("q", "", type=str)
-    category_filter = request.args.get("filter", "", type=str)
-    query, shortcuts = parse_query(raw_query)
-    entries = apply_filters(DATASET, query, shortcuts, category_filter)
-    payload = [
-        {"name": entry.name, "category": entry.category, "index": entry.index}
-        for entry in entries[:15]
-    ]
-    return jsonify({"suggestions": payload})
+    @app.get("/api/suggestions")
+    def suggestions():
+        raw_query = request.args.get("q", "", type=str)
+        category_filter = request.args.get("filter", "", type=str)
+        query, shortcuts = parse_query(raw_query)
+        entries = apply_filters(DATASET, query, shortcuts, category_filter)
+        payload = [
+            {"name": entry.name, "category": entry.category, "index": entry.index}
+            for entry in entries[:15]
+        ]
+        return jsonify({"suggestions": payload})
 
+    @app.get("/api/search")
+    def search():
+        raw_query = request.args.get("q", "", type=str)
+        category_filter = request.args.get("filter", "", type=str)
+        query, shortcuts = parse_query(raw_query)
+        entries = apply_filters(DATASET, query, shortcuts, category_filter)
+        payload = [serialize_entry(entry) for entry in entries]
+        return jsonify({"query": raw_query, "shortcuts": shortcuts, "results": payload})
 
-@app.get("/api/search")
-def search():
-    raw_query = request.args.get("q", "", type=str)
-    category_filter = request.args.get("filter", "", type=str)
-    query, shortcuts = parse_query(raw_query)
-    entries = apply_filters(DATASET, query, shortcuts, category_filter)
-    payload = [serialize_entry(entry) for entry in entries]
-    return jsonify({"query": raw_query, "shortcuts": shortcuts, "results": payload})
+    @app.get("/api/random")
+    def random_entry():
+        entry = random.choice(DATASET)
+        return jsonify({"label": "Random Spotlight", "result": serialize_entry(entry)})
 
-
-@app.get("/api/random")
-def random_entry():
-    entry = random.choice(DATASET)
-    return jsonify({"label": "Random Spotlight", "result": serialize_entry(entry)})
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    if __name__ == "__main__":
+        app.run(debug=True)
+elif __name__ == "__main__":
+    raise SystemExit("Flask is not installed. Run `pip install flask` to start the web server.")
