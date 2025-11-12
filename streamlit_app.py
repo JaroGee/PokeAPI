@@ -527,6 +527,7 @@ def set_page_metadata() -> Dict[str, str]:
         pointer-events: none !important;
         caret-color: transparent !important;
         color: transparent !important;
+        opacity: 0 !important;
       }}
       [data-testid="stSelectbox"] input::placeholder {{
         color: transparent !important;
@@ -536,6 +537,7 @@ def set_page_metadata() -> Dict[str, str]:
         color: #111111 !important;
         border-radius: 22px !important;
         border: 2px solid rgba(17,17,17,0.18) !important;
+        caret-color: transparent !important;
       }}
       [data-baseweb="popover"] [role="listbox"] {{
         background: #ffffff !important;
