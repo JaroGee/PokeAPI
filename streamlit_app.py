@@ -13,6 +13,7 @@ from typing import Dict, List, Sequence, Iterable, Tuple, Set
 from difflib import get_close_matches
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
@@ -52,6 +53,7 @@ except Exception:  # pragma: no cover - run as script
 
 PAGE_SIZE = 8
 MAX_HISTORY = 64
+RESULTS_ANCHOR_ID = "results-anchor"
 
 COLOR_PALETTE: Dict[str, str] = {
     "red": "#ff0000",
@@ -196,7 +198,7 @@ def pokemon_of_the_day(seed: str | None = None) -> Dict[str, object] | None:
     entry = build_entry_from_api(pid, name)
     if not entry:
         return None
-    sprite = entry.get("sprite") or _pokemon_icon_url(entry["name"])
+    sprite = entry.get("sprite") or _pokemon_icon_url(entry["name"], pid if pid else None)
     return {"id": pid, "name": entry["name"], "sprite": sprite}
 
 
@@ -273,6 +275,8 @@ def ensure_state() -> None:
         st.session_state["force_search_query"] = None
     if "clear_request" not in st.session_state:
         st.session_state["clear_request"] = False
+    if "scroll_to_results" not in st.session_state:
+        st.session_state["scroll_to_results"] = False
 
 
 def _mark_enter_submit() -> None:
@@ -320,19 +324,85 @@ def attach_search_suggestions(options: Sequence[Tuple[str, str]]) -> None:
             hideHints();
             const hintInterval = setInterval(hideHints, 300);
             setTimeout(() => clearInterval(hintInterval), 4000);
-            const historyInputs = doc.querySelectorAll('input[id*="history_select"]');
-            historyInputs.forEach(inputNode => {{
-                const selectRoot = inputNode.closest('div[data-baseweb="select"]');
-                if (selectRoot) {{
-                    selectRoot.style.color = '#777777';
-                    const descendants = selectRoot.querySelectorAll('*');
-                    descendants.forEach(el => el.style.setProperty('color', '#777777', 'important'));
-                }}
-            }});
         }})();
         </script>
     """
     st.markdown(script, unsafe_allow_html=True)
+
+
+def request_results_scroll() -> None:
+    st.session_state["scroll_to_results"] = True
+
+
+def perform_results_scroll(force: bool = False) -> None:
+    should_scroll = force or st.session_state.get("scroll_to_results", False)
+    if should_scroll:
+        st.session_state["scroll_to_results"] = False
+    _inject_scroll_helpers(should_scroll)
+    inject_selectbox_theme()
+
+
+def _inject_scroll_helpers(should_scroll: bool) -> None:
+    config = {"anchorId": RESULTS_ANCHOR_ID, "shouldScroll": should_scroll}
+    payload = json.dumps(config)
+    components.html(
+        f"""
+        <script>
+        (function initAutoScroll() {{
+            const config = {payload};
+            const frameWin = window;
+            let hostWin = frameWin;
+            try {{
+                if (frameWin.parent && frameWin.parent.document) {{
+                    hostWin = frameWin.parent;
+                }}
+            }} catch (err) {{
+                hostWin = frameWin;
+            }}
+            const win = hostWin;
+            const doc = win.document;
+            if (!doc || !doc.body) {{
+                return;
+            }}
+
+            const scrollToResults = () => {{
+                const anchor = doc.getElementById(config.anchorId);
+                if (!anchor) {{
+                    return false;
+                }}
+                try {{
+                    anchor.scrollIntoView({{ behavior: "smooth", block: "start" }});
+                }} catch (error) {{
+                    const top = anchor.getBoundingClientRect().top + (win.scrollY || 0);
+                    win.scrollTo({{ top, behavior: "smooth" }});
+                }}
+                return true;
+            }};
+
+            if (config.shouldScroll) {{
+                let attempts = 0;
+                const maxAttempts = 160;
+                const tick = () => {{
+                    if (scrollToResults()) {{
+                        return;
+                    }}
+                    if (attempts < maxAttempts) {{
+                        attempts += 1;
+                        win.requestAnimationFrame(tick);
+                    }}
+                }};
+                tick();
+            }}
+        }})();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+def inject_selectbox_theme() -> None:
+    return
 
 
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
@@ -350,7 +420,11 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    favicon_path = resolve_asset_path("pokesearch_favicon.png", base_path)
+    favicon_path = None
+    for icon_name in ("pokesearch_flavicon.png", "pokesearch_favicon.png", "pokesearch.ico"):
+        favicon_path = resolve_asset_path(icon_name, base_path)
+        if favicon_path:
+            break
 
     st.set_page_config(
         page_title="PokéSearch!",
@@ -382,8 +456,10 @@ def set_page_metadata() -> Dict[str, str]:
     cursor_image, cursor_mime = _load_first_image_base64(
         asset_search_paths("pokeball.png", base_path) + asset_search_paths("pokeball.jpeg", base_path)
     )
-    pokeapi_logo_path = resolve_asset_path("pokeapi_256.png", base_path)
-    pokeapi_logo = load_file_as_base64(pokeapi_logo_path) if pokeapi_logo_path else None
+    pokeapi_logo_path = base_path / "static" / "assets" / "pokeapi_256.png"
+    if not pokeapi_logo_path.exists():
+        pokeapi_logo_path = resolve_asset_path("pokeapi_256.png", base_path)
+    pokeapi_logo = load_file_as_base64(pokeapi_logo_path) if pokeapi_logo_path and pokeapi_logo_path.exists() else None
     cursor_style = (
         f'cursor: url("data:{cursor_mime};base64,{cursor_image}") 16 16, auto !important;'
         if cursor_image
@@ -537,6 +613,8 @@ def set_page_metadata() -> Dict[str, str]:
         color: #000000 !important;
         border: 2px solid rgba(0,0,0,0.18) !important;
         box-shadow: 0 10px 18px rgba(0, 0, 0, 0.2) !important;
+        white-space: nowrap;
+        min-width: 90px;
       }}
       button[aria-label="Search"]:hover, button[title="Search"]:hover,
       button[aria-label="Random"]:hover, button[title="Random"]:hover {{
@@ -559,43 +637,74 @@ def set_page_metadata() -> Dict[str, str]:
       .stTextInput div[data-testid="InputInstructions"] {{
         display: none !important;
       }}
-      [data-testid="stTextInputRootElement"][data-baseweb="input"] {{
-        background: linear-gradient(135deg, rgba(255, 107, 107, 0.95), rgba(255, 222, 0, 0.95)) !important;
-        border-radius: 20px !important;
-        border: 2px solid rgba(255, 255, 255, 0.55) !important;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-        min-height: 58px;
-        overflow: hidden;
+      .search-panel {{
+        padding: 1rem 1.25rem;
+        border-radius: 26px;
+        background: rgba(255,255,255,0.92);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.18);
+        margin-bottom: 1.25rem;
       }}
-      [data-testid="stTextInputRootElement"][data-baseweb="input"]:focus-within {{
-        border-color: #ffffff !important;
-        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.55) !important;
+      .search-panel .section-label {{
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        color: rgba(0,0,0,0.55);
+        letter-spacing: 0.08em;
+        margin-bottom: 0.35rem;
+        font-weight: 600;
       }}
-      [data-testid="stTextInputRootElement"][data-baseweb="input"] > div[data-baseweb="base-input"] {{
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
+      .search-panel .search-input {{
+        border-radius: 22px;
+        border: 2px solid rgba(0,0,0,0.12);
+        min-height: 54px;
+        font-size: 1rem;
       }}
-      [data-testid="stTextInputRootElement"][data-baseweb="input"] input {{
-        background: transparent !important;
+      .search-panel .button-row {{
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+      }}
+      .search-panel .button-row .stButton>button {{
+        min-width: 110px;
+      }}
+      [data-testid="stSelectbox"] > div:first-child {{
+        border-radius: 18px !important;
+        border: 1px solid rgba(0,0,0,0.08) !important;
+        min-height: 52px;
+        background: #ffffff !important;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.12) !important;
+      }}
+      [data-testid="stSelectbox"] input {{
         color: #1d1d1f !important;
-        min-height: 58px;
-        padding: 0.7rem 1.2rem !important;
+        padding: 0.55rem 1rem !important;
       }}
-      [data-testid="stTextInputRootElement"][data-baseweb="input"] input::placeholder {{
-        color: rgba(255,255,255,0.95) !important;
+      [data-testid="stSelectbox"] svg {{
+        color: rgba(0,0,0,0.45) !important;
       }}
       div[aria-live="polite"],
       div[role="status"] {{
         display: none !important;
       }}
-      .history-select-wrapper div[role="combobox"],
-      .history-select-wrapper div[role="combobox"] * {{
-        color: #777777 !important;
-        font-weight: 600;
+      [data-baseweb="popover"] [role="listbox"] {{
+        background: #ffffff !important;
+        color: #1d1d1f !important;
+        border-radius: 16px !important;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.25) !important;
+        max-height: 360px !important;
+        padding: 0 !important;
       }}
-      .history-select-wrapper svg {{
-        color: #777777 !important;
+      [data-baseweb="popover"] [role="option"] {{
+        color: #1d1d1f !important;
+      }}
+      [data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar {{
+        width: 6px;
+      }}
+      [data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar-thumb {{
+        background: rgba(0,0,0,0.25);
+        border-radius: 999px;
+      }}
+      [data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar-track {{
+        background: rgba(0,0,0,0.05);
       }}
       .gallery-title {{
         font-size: 1.15rem;
@@ -871,6 +980,10 @@ def set_page_metadata() -> Dict[str, str]:
         display: none !important;
       }}
 
+      #{RESULTS_ANCHOR_ID} {{
+        scroll-margin-top: 14px;
+      }}
+
       /* Hide Streamlit input hint like "Press Enter to submit" globally */
       .stTextInput [aria-live=polite] {{
         display: none !important;
@@ -931,8 +1044,9 @@ def _slugify_pokemon_name(name: str) -> str:
     return slug
 
 
-def _pokemon_icon_url(name: str) -> str:
-    # Use PokémonDB small icon set (sword-shield icons)
+def _pokemon_icon_url(name: str, pid: int | None = None) -> str:
+    if pid:
+        return f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pid}.png"
     slug = _slugify_pokemon_name(name)
     return f"https://img.pokemondb.net/sprites/sword-shield/icon/{slug}.png"
 
@@ -1152,7 +1266,7 @@ def _render_evolution_paths(chain: Dict[str, object] | None) -> str:
         for idx, stage in enumerate(path):
             name = str(stage.get("name", "")).replace("-", " ").title()
             pid = int(stage.get("id") or 0)
-            sprite = _pokemon_icon_url(name)
+            sprite = _pokemon_icon_url(name, pid if pid else None)
             detail = str(stage.get("detail") or "")
             detail_html = f'<div class="evo-detail">{html.escape(detail)}</div>' if detail else ""
             node_html = "".join(
@@ -1184,7 +1298,7 @@ def render_sprite_gallery(matches: List[Dict[str, object]]) -> None:
             raw_name = str(entry.get("name", ""))
             display_name = raw_name.capitalize()
             pid = int(entry.get("id", 0))
-            icon = _pokemon_icon_url(raw_name)
+            icon = _pokemon_icon_url(raw_name, pid if pid else None)
             st.markdown(
                 f'''
                 <a class="sprite-card" href="?sprite={pid}" target="_self">
@@ -1202,11 +1316,12 @@ def render_entry_html(entry: Dict[str, object], fallback_icon_b64: str) -> str:
     name = str(entry.get("name", ""))
 
     is_pokemon = category.lower() in {"pokémon", "pokemon"}
+    pid = int(entry.get("index") or 0)
     sprite_override = entry.get("sprite")
     if sprite_override:
         display_src_raw = str(sprite_override)
     elif is_pokemon:
-        display_src_raw = _pokemon_icon_url(name)
+        display_src_raw = _pokemon_icon_url(name, pid if pid else None)
     else:
         display_src_raw = f"data:image/svg+xml;base64,{fallback_icon_b64}"
     icon_src = html.escape(display_src_raw, quote=True)
@@ -1323,7 +1438,7 @@ def main() -> None:
             )
         pod = pokemon_of_the_day()
         if pod:
-            sprite = pod.get("sprite") or _pokemon_icon_url(pod.get("name", ""))
+            sprite = pod.get("sprite") or _pokemon_icon_url(pod.get("name", ""), int(pod.get("id") or 0))
             st.markdown(
                 f'''
                 <div id="random-pokemon">
@@ -1364,6 +1479,7 @@ def main() -> None:
                 st.session_state["search_prefill"] = ""
                 st.session_state["force_search_query"] = None
                 st.session_state["clear_request"] = False
+            st.markdown('<div class="section-label">Search</div>', unsafe_allow_html=True)
             search_value = st.text_input(
                 "Search the Pokédex",
                 placeholder="Search Pokémon or #",
@@ -1372,7 +1488,8 @@ def main() -> None:
                 autocomplete="off",
                 on_change=_mark_enter_submit,
             )
-            search_cols = st.columns(3, gap="small")
+            st.markdown('<div class="button-row">', unsafe_allow_html=True)
+            search_cols = st.columns(3)
             with search_cols[0]:
                 search_clicked = st.button(
                     "Search",
@@ -1392,6 +1509,7 @@ def main() -> None:
                     key="clear_search",
                     disabled=not bool(search_value),
                 )
+            st.markdown("</div>", unsafe_allow_html=True)
             if reset_clicked:
                 st.session_state["search_prefill"] = ""
                 st.session_state["search_query"] = ""
@@ -1535,28 +1653,34 @@ def main() -> None:
 
             attach_search_suggestions(suggestion_payload)
 
+    results_container = right_col.container()
+    with results_container:
+        st.markdown(f'<div id="{RESULTS_ANCHOR_ID}"></div>', unsafe_allow_html=True)
+        gallery_placeholder = st.empty()
+        history_container = st.container()
+
     if st.session_state.get("enter_submit"):
         search_clicked = True
         st.session_state["enter_submit"] = False
 
-    gallery_placeholder = right_col.empty()
     if auto_gallery_needed:
         with gallery_placeholder.container():
             if filtered_species_index:
                 render_sprite_gallery(filtered_species_index)
             else:
                 st.info("No Pokémon match these filters yet.")
-    history_container = right_col.container()
     with history_container:
         render_history(pixel_icon_b64)
+    perform_results_scroll()
 
     footer_logo = assets.get("pokeapi_logo")
-    powered_by = (
-        f'<span class="footer-powered">Powered by '
-        f'<img src="data:image/png;base64,{footer_logo}" alt="PokéAPI logo" /></span>'
-        if footer_logo
-        else ""
-    )
+    if footer_logo:
+        powered_by = (
+            '<span class="footer-powered">Powered by '
+            f'<img src="data:image/png;base64,{footer_logo}" alt="PokéAPI logo" /></span>'
+        )
+    else:
+        powered_by = '<span class="footer-powered">Powered by PokéAPI</span>'
     st.markdown(
         f"""
         <div class="footer-bar">
@@ -1595,6 +1719,7 @@ def main() -> None:
             gallery_placeholder.empty()
             with gallery_placeholder.container():
                 render_sprite_gallery(matches)
+            perform_results_scroll(force=True)
             return
         limit = len(matches)
         built: List[Dict[str, object]] = []
@@ -1621,6 +1746,7 @@ def main() -> None:
         if meta_text.strip().lower() == "search":
             meta_text = ""
         add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, shortcut_list))
+        request_results_scroll()
         st.rerun()
 
     if random_clicked:
@@ -1668,6 +1794,7 @@ def main() -> None:
                 [],
             )
         )
+        request_results_scroll()
         st.rerun()
 
 
