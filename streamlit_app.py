@@ -58,32 +58,6 @@ COLOR_PALETTE: Dict[str, str] = {
     "gold": "#b3a125",
 }
 
-GENERATION_FILTERS: Dict[str, tuple[int, int] | None] = {
-    "all": None,
-    "gen1": (1, 151),
-    "gen2": (152, 251),
-    "gen3": (252, 386),
-    "gen4": (387, 493),
-    "gen5": (494, 649),
-    "gen6": (650, 721),
-    "gen7": (722, 809),
-    "gen8": (810, 905),
-    "gen9": (906, 1025),
-}
-
-GENERATION_LABELS: Dict[str, str] = {
-    "all": "All generations",
-    "gen1": "Generation I · Kanto (#1-151)",
-    "gen2": "Generation II · Johto (#152-251)",
-    "gen3": "Generation III · Hoenn (#252-386)",
-    "gen4": "Generation IV · Sinnoh (#387-493)",
-    "gen5": "Generation V · Unova (#494-649)",
-    "gen6": "Generation VI · Kalos (#650-721)",
-    "gen7": "Generation VII · Alola (#722-809)",
-    "gen8": "Generation VIII · Galar/Hisui (#810-905)",
-    "gen9": "Generation IX · Paldea (#906-1025)",
-}
-
 GENERATION_SLUG_LABELS: Dict[str, str] = {
     "generation-i": "Generation I · Kanto",
     "generation-ii": "Generation II · Johto",
@@ -95,89 +69,6 @@ GENERATION_SLUG_LABELS: Dict[str, str] = {
     "generation-viii": "Generation VIII · Galar/Hisui",
     "generation-ix": "Generation IX · Paldea",
 }
-
-TYPE_FILTERS: Dict[str, str | None] = {
-    "all": None,
-    "normal": "Normal",
-    "fire": "Fire",
-    "water": "Water",
-    "electric": "Electric",
-    "grass": "Grass",
-    "ice": "Ice",
-    "fighting": "Fighting",
-    "poison": "Poison",
-    "ground": "Ground",
-    "flying": "Flying",
-    "psychic": "Psychic",
-    "bug": "Bug",
-    "rock": "Rock",
-    "ghost": "Ghost",
-    "dragon": "Dragon",
-    "dark": "Dark",
-    "steel": "Steel",
-    "fairy": "Fairy",
-}
-
-TYPE_LABELS: Dict[str, str] = {
-    key: ("" if key == "all" else label)
-    for key, label in TYPE_FILTERS.items()
-}
-
-COLOR_FILTERS: Dict[str, str | None] = {
-    "all": None,
-    "black": "black",
-    "blue": "blue",
-    "brown": "brown",
-    "gray": "gray",
-    "green": "green",
-    "pink": "pink",
-    "purple": "purple",
-    "red": "red",
-    "white": "white",
-    "yellow": "yellow",
-}
-
-HABITAT_FILTERS: Dict[str, str | None] = {
-    "all": None,
-    "cave": "cave",
-    "forest": "forest",
-    "grassland": "grassland",
-    "mountain": "mountain",
-    "rare": "rare",
-    "rough-terrain": "rough-terrain",
-    "sea": "sea",
-    "urban": "urban",
-    "waters-edge": "waters-edge",
-}
-
-SHAPE_FILTERS: Dict[str, str | None] = {
-    "all": None,
-    "ball": "ball",
-    "squiggle": "squiggle",
-    "fish": "fish",
-    "arms": "arms",
-    "blob": "blob",
-    "upright": "upright",
-    "legs": "legs",
-    "quadruped": "quadruped",
-    "wings": "wings",
-    "tentacles": "tentacles",
-    "heads": "heads",
-    "humanoid": "humanoid",
-    "bug-wings": "bug-wings",
-    "armor": "armor",
-}
-
-CAPTURE_BUCKETS: Dict[str, tuple[str, tuple[int, int] | None]] = {
-    "all": ("Any", None),
-    "very_easy": ("Very Easy (≥200)", (200, 255)),
-    "easy": ("Easy (150-199)", (150, 199)),
-    "standard": ("Standard (100-149)", (100, 149)),
-    "challenging": ("Challenging (50-99)", (50, 99)),
-    "tough": ("Tough (<50)", (0, 49)),
-}
-
-FILTER_HELP_TEXT = "Applying this filter limits search & random picks to the selected category."
 
 
 @st.cache_data(ttl=24 * 60 * 60)
@@ -240,28 +131,12 @@ def ensure_state() -> None:
         st.session_state["history"] = []
     if "search_query" not in st.session_state:
         st.session_state["search_query"] = ""
-    if "generation_filter" not in st.session_state:
-        st.session_state["generation_filter"] = "all"
-    if "type_filter" not in st.session_state:
-        st.session_state["type_filter"] = "all"
-    if "color_filter" not in st.session_state:
-        st.session_state["color_filter"] = "all"
-    if "habitat_filter" not in st.session_state:
-        st.session_state["habitat_filter"] = "all"
-    if "shape_filter" not in st.session_state:
-        st.session_state["shape_filter"] = "all"
-    if "capture_filter" not in st.session_state:
-        st.session_state["capture_filter"] = "all"
-    if "rand_pool_map" not in st.session_state:
-        st.session_state["rand_pool_map"] = {}
     if "search_prefill" not in st.session_state:
         st.session_state["search_prefill"] = ""
     if "search_query_input" not in st.session_state:
         st.session_state["search_query_input"] = ""
     if "search_feedback" not in st.session_state:
         st.session_state["search_feedback"] = ""
-    if "species_attr_cache" not in st.session_state:
-        st.session_state["species_attr_cache"] = {}
     if "pending_lookup_id" not in st.session_state:
         st.session_state["pending_lookup_id"] = None
     if "enter_submit" not in st.session_state:
@@ -347,7 +222,7 @@ def set_page_metadata() -> Dict[str, str]:
         {bg_style}
       }}
       body, p, div, span, label, input, button, h1, h2, h3, h4, h5, h6,
-      .stMarkdown, .stTextInput, .stSelectbox {{
+      .stMarkdown, .stTextInput {{
         color: #000000 !important;
       }}
       body, div, section {{
@@ -513,13 +388,13 @@ def set_page_metadata() -> Dict[str, str]:
       input,
       textarea,
       select,
-      [role="combobox"],
-      [data-baseweb="select"] > div {{
+      [role="combobox"] {{
         background: #ffffff !important;
         color: #111111 !important;
       }}
       input,
-      [data-baseweb="select"] > div {{
+      textarea,
+      select {{
         border: 1px solid rgba(0,0,0,0.25) !important;
       }}
       input::placeholder,
@@ -535,44 +410,9 @@ def set_page_metadata() -> Dict[str, str]:
       .search-panel .button-row .stButton>button {{
         min-width: 110px;
       }}
-      [data-testid="stSelectbox"] > div:first-child {{
-        border-radius: 18px !important;
-        border: 1px solid rgba(0,0,0,0.08) !important;
-        min-height: 52px;
-        background: #ffffff !important;
-        box-shadow: 0 6px 14px rgba(0,0,0,0.12) !important;
-      }}
-      [data-testid="stSelectbox"] input {{
-        color: #1d1d1f !important;
-        padding: 0.55rem 1rem !important;
-      }}
-      [data-testid="stSelectbox"] svg {{
-        color: rgba(0,0,0,0.45) !important;
-      }}
       div[aria-live="polite"],
       div[role="status"] {{
         display: none !important;
-      }}
-      [data-baseweb="popover"] [role="listbox"] {{
-        background: #ffffff !important;
-        color: #1d1d1f !important;
-        border-radius: 16px !important;
-        box-shadow: 0 16px 40px rgba(0,0,0,0.25) !important;
-        max-height: 360px !important;
-        padding: 0 !important;
-      }}
-      [data-baseweb="popover"] [role="option"] {{
-        color: #1d1d1f !important;
-      }}
-      [data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar {{
-        width: 6px;
-      }}
-      [data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar-thumb {{
-        background: rgba(0,0,0,0.25);
-        border-radius: 999px;
-      }}
-      [data-baseweb="popover"] [role="listbox"]::-webkit-scrollbar-track {{
-        background: rgba(0,0,0,0.05);
       }}
       .gallery-title {{
         font-size: 1.15rem;
@@ -750,50 +590,6 @@ def set_page_metadata() -> Dict[str, str]:
         font-size: 1.25rem;
         color: rgba(0,0,0,0.4);
       }}
-      .filter-help {{
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        border: 2px solid rgba(0,0,0,0.2);
-        color: rgba(0,0,0,0.75);
-        font-weight: 700;
-        margin-top: 0.3rem;
-        cursor: help;
-        background: rgba(255,255,255,0.92);
-        font-size: 0.65rem;
-        position: relative;
-      }}
-      .filter-help::after {{
-        content: attr(data-tooltip);
-        position: absolute;
-        left: 110%;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(0,0,0,0.85);
-        color: white;
-        padding: 0.35rem 0.55rem;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        width: 220px;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.15s ease;
-        z-index: 10;
-      }}
-      .filter-help:hover::after {{
-        opacity: 1;
-      }}
-      div[data-baseweb="select"] > div {{
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 2px solid rgba(0, 0, 0, 0.2) !important;
-        border-radius: 16px !important;
-        min-height: 44px;
-        padding: 0.15rem 0.75rem !important;
-      }}
       .history-group h3,
       .history-group h3 a,
       .history-group h3 svg {{
@@ -913,90 +709,6 @@ def _pokemon_icon_url(name: str, pid: int | None = None) -> str:
         return f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pid}.png"
     slug = _slugify_pokemon_name(name)
     return f"https://img.pokemondb.net/sprites/sword-shield/icon/{slug}.png"
-
-
-def _filter_species_by_generation(
-    species: List[Dict[str, object]], generation_key: str
-) -> List[Dict[str, object]]:
-    bounds = GENERATION_FILTERS.get(generation_key)
-    if not bounds:
-        return species
-    low, high = bounds
-    return [s for s in species if low <= int(s.get("id", 0)) <= high]
-
-
-def _filter_species_by_type(
-    species: List[Dict[str, object]], type_key: str
-) -> List[Dict[str, object]]:
-    if type_key == "all":
-        return species
-    try:
-        from pokeapi_live import load_type_index as _load_type_index  # type: ignore
-    except Exception:
-        try:
-            from .pokeapi_live import load_type_index as _load_type_index  # type: ignore
-        except Exception:
-            return species
-    try:
-        allowed_ids = set(_load_type_index(type_key))
-    except Exception:
-        return species
-    if not allowed_ids:
-        return species
-    return [s for s in species if int(s.get("id", 0)) in allowed_ids]
-
-
-def _load_species_attributes(pokemon_id: int) -> Dict[str, object]:
-    cache: Dict[int, Dict[str, object]] = st.session_state.setdefault("species_attr_cache", {})
-    if pokemon_id in cache:
-        return cache[pokemon_id]
-    try:
-        from pokeapi_live import get_species_attributes as _get_species_attributes  # type: ignore
-    except Exception:
-        from .pokeapi_live import get_species_attributes as _get_species_attributes  # type: ignore
-    attrs = _get_species_attributes(pokemon_id) or {}
-    cache[pokemon_id] = attrs
-    return attrs
-
-
-def _apply_additional_filters(
-    species: List[Dict[str, object]],
-    color_key: str,
-    habitat_key: str,
-    shape_key: str,
-    capture_key: str,
-) -> List[Dict[str, object]]:
-    result = []
-    bucket = CAPTURE_BUCKETS.get(capture_key, ("Any", None))[1]
-    for record in species:
-        pid = int(record.get("id", 0))
-        attrs = _load_species_attributes(pid)
-        color_val = str(attrs.get("color", "") or "").lower()
-        habitat_val = str(attrs.get("habitat", "") or "").lower()
-        shape_val = str(attrs.get("shape", "") or "").lower()
-        eggs = [str(e or "").lower() for e in attrs.get("egg_groups", [])]
-        capture_rate = attrs.get("capture_rate")
-
-        if color_key != "all":
-            target_color = COLOR_FILTERS.get(color_key)
-            if not target_color or color_val != target_color:
-                continue
-        if habitat_key != "all":
-            target_habitat = HABITAT_FILTERS.get(habitat_key)
-            if not target_habitat or habitat_val != target_habitat:
-                continue
-        if shape_key != "all":
-            target_shape = SHAPE_FILTERS.get(shape_key)
-            if not target_shape or shape_val != target_shape:
-                continue
-        if bucket:
-            low, high = bucket
-            if not isinstance(capture_rate, int):
-                continue
-            if not (low <= capture_rate <= high):
-                continue
-        result.append(record)
-    return result
 
 
 def _format_filter_value(value: str | None) -> str:
@@ -1208,14 +920,11 @@ def main() -> None:
             st.session_state["search_feedback"] = ""
             st.session_state["enter_submit"] = True
         st.query_params.clear()
-    shortcuts: Dict[str, str] = {}
     pending_lookup_trigger = False
     search_clicked = False
     random_clicked = False
     query_trimmed = ""
-    filters_active = False
-    auto_gallery_needed = False
-    filtered_species_index = list(species_index)
+    available_species = list(species_index)
 
     left_col, right_col = st.columns([1, 2], gap="large", vertical_alignment="top")
 
@@ -1322,127 +1031,6 @@ def main() -> None:
             feedback_slot = st.empty()
             if msg := st.session_state.get("search_feedback"):
                 feedback_slot.warning(msg)
-            history_entries = [
-                entry for entry in st.session_state.history if isinstance(entry, dict)
-            ]
-            history_placeholder = "__history_placeholder__"
-            history_clear = "__history_clear__"
-            history_tokens: List[str] = [history_placeholder]
-            if history_entries:
-                history_labels: Dict[str, str] = {history_placeholder: ""}
-            else:
-                history_labels = {history_placeholder: "(no history)"}
-            for idx, entry_group in enumerate(history_entries):
-                display_query = entry_group.get("query") or entry_group.get("label") or "Past search"
-                history_token = f"entry_{idx}"
-                history_tokens.append(history_token)
-                history_labels[history_token] = f"{idx + 1}. {display_query}"
-            if history_entries:
-                history_tokens.append(history_clear)
-                history_labels[history_clear] = "Clear history"
-            history_label = "Search History"
-            st.markdown('<div class="history-select-wrapper">', unsafe_allow_html=True)
-            history_choice = st.selectbox(
-                history_label,
-                history_tokens,
-                format_func=lambda token: history_labels.get(token, ""),
-                label_visibility="visible",
-                key="history_select",
-            )
-            if history_entries and history_choice == history_clear:
-                st.session_state.history = []
-                st.rerun()
-            if history_entries and history_choice not in {history_placeholder, history_clear}:
-                parts = history_choice.split("_", 1)
-                if len(parts) == 2 and parts[0] == "entry":
-                    idx = int(parts[1])
-                    if 0 <= idx < len(history_entries):
-                        chosen_entry = history_entries[idx]
-                        restored_query = str(chosen_entry.get("query") or chosen_entry.get("label") or "")
-                        st.session_state["search_prefill"] = restored_query
-                        st.rerun()
-
-            generation_choice = st.selectbox(
-                "Generation",
-                list(GENERATION_FILTERS.keys()),
-                key="generation_filter",
-                format_func=lambda key: "" if key == "all" else GENERATION_LABELS.get(key, key.title()),
-                label_visibility="visible",
-            )
-            type_choice = st.selectbox(
-                "Type",
-                list(TYPE_FILTERS.keys()),
-                key="type_filter",
-                format_func=lambda key: "" if key == "all" else TYPE_LABELS.get(key, key.title()),
-                label_visibility="visible",
-            )
-            color_choice = st.selectbox(
-                "Color",
-                list(COLOR_FILTERS.keys()),
-                key="color_filter",
-                format_func=lambda key: "" if key == "all" else key.replace("-", " ").title(),
-                label_visibility="visible",
-            )
-            habitat_choice = st.selectbox(
-                "Habitat",
-                list(HABITAT_FILTERS.keys()),
-                key="habitat_filter",
-                format_func=lambda key: "" if key == "all" else key.replace("-", " ").title(),
-                label_visibility="visible",
-            )
-            shape_choice = st.selectbox(
-                "Body Shape",
-                list(SHAPE_FILTERS.keys()),
-                key="shape_filter",
-                format_func=lambda key: "" if key == "all" else key.replace("-", " ").title(),
-                label_visibility="visible",
-            )
-            capture_choice = st.selectbox(
-                "Capture Rate",
-                list(CAPTURE_BUCKETS.keys()),
-                key="capture_filter",
-                format_func=lambda key: "" if key == "all" else CAPTURE_BUCKETS[key][0],
-                label_visibility="visible",
-            )
-            st.markdown(
-                f'<div class="filter-help" data-tooltip="{html.escape(FILTER_HELP_TEXT)}">?</div>',
-                unsafe_allow_html=True,
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            selected_generation = generation_choice
-            selected_type = type_choice
-            color_filter = color_choice
-            habitat_filter = habitat_choice
-            shape_filter = shape_choice
-            capture_filter = capture_choice
-
-            filter_values = {
-                "generation": generation_choice,
-                "type": type_choice,
-                "color": color_choice,
-                "habitat": habitat_choice,
-                "shape": shape_choice,
-                "capture": capture_choice,
-            }
-            filters_active = any(value != "all" for value in filter_values.values())
-            auto_gallery_needed = filters_active and not query_trimmed
-
-            filtered_species_index = _filter_species_by_generation(
-                species_index, generation_choice
-            )
-            filtered_species_index = _filter_species_by_type(
-                filtered_species_index, type_choice
-            )
-            filtered_species_index = _apply_additional_filters(
-                filtered_species_index,
-                color_choice,
-                habitat_choice,
-                shape_choice,
-                capture_choice,
-            )
-
-            shortcuts = {}
 
     results_container = right_col.container()
     with results_container:
@@ -1453,12 +1041,6 @@ def main() -> None:
         search_clicked = True
         st.session_state["enter_submit"] = False
 
-    if auto_gallery_needed:
-        with gallery_placeholder.container():
-            if filtered_species_index:
-                render_sprite_gallery(filtered_species_index)
-            else:
-                st.info("No Pokémon match these filters yet.")
     with history_container:
         render_history(pixel_icon_b64)
 
@@ -1487,24 +1069,24 @@ def main() -> None:
 
     if search_clicked:
         st.session_state["search_feedback"] = ""
-        if not query_trimmed and not filters_active:
-            st.session_state["search_feedback"] = "Enter a Pokémon name or apply at least one filter to search."
+        if not query_trimmed:
+            st.session_state["search_feedback"] = "Enter a Pokémon name or Pokédex number to search."
             st.rerun()
             return
         if query_trimmed.isdigit():
             matches = [
-                s for s in filtered_species_index if int(s.get("id", 0)) == int(query_trimmed)
+                s for s in available_species if int(s.get("id", 0)) == int(query_trimmed)
             ]
         elif query_trimmed:
             needle = query_trimmed.lower()
-            matches = [s for s in filtered_species_index if needle in str(s["name"]).lower()]
+            matches = [s for s in available_species if needle in str(s["name"]).lower()]
         else:
-            matches = filtered_species_index
+            matches = available_species
         if not matches:
-            st.session_state["search_feedback"] = "No Pokémon found. Try a different name or adjust filters."
+            st.session_state["search_feedback"] = "No Pokémon found. Try a different name or number."
             st.rerun()
             return
-        if len(matches) > 8 or (filters_active and not query_trimmed):
+        if len(matches) > 8:
             gallery_placeholder.empty()
             with gallery_placeholder.container():
                 render_sprite_gallery(matches)
@@ -1516,68 +1098,27 @@ def main() -> None:
             if built_entry:
                 built.append(built_entry)
         serialized = built
-        shortcut_list = [f'@{key}="{value}"' for key, value in shortcuts.items()]
         label = query_trimmed or "Full Library"
-        meta_parts = []
-        filter_labels = [
-            ("Generation", selected_generation != "all", GENERATION_LABELS.get(selected_generation, "")),
-            ("Type", selected_type != "all", TYPE_LABELS.get(selected_type, "")),
-            ("Color", color_filter != "all", _format_filter_value(COLOR_FILTERS.get(color_filter))),
-            ("Habitat", habitat_filter != "all", _format_filter_value(HABITAT_FILTERS.get(habitat_filter))),
-            ("Shape", shape_filter != "all", _format_filter_value(SHAPE_FILTERS.get(shape_filter))),
-            ("Capture", capture_filter != "all", CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]),
-        ]
-        for _label, active, text in filter_labels:
-            if active and text:
-                meta_parts.append(text)
-        meta_text = " · ".join(part for part in meta_parts if part)
-        if meta_text.strip().lower() == "search":
-            meta_text = ""
-        add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, shortcut_list))
+        meta_text = ""
+        add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
         st.rerun()
 
     if random_clicked:
         st.session_state["search_feedback"] = ""
-        all_ids = [int(s["id"]) for s in filtered_species_index]
-        if not all_ids:
-            st.warning("No Pokémon available in this filter combination. Try another generation or type.")
+        if not available_species:
+            st.warning("No Pokémon available right now. Try again in a moment.")
             return
-
-        pool_key = "|".join(
-            [
-                selected_generation,
-                selected_type,
-                color_filter,
-                habitat_filter,
-                shape_filter,
-                capture_filter,
-            ]
-        )
-        rand_pool = st.session_state.setdefault("rand_pool_map", {})
-        if pool_key not in rand_pool or not rand_pool[pool_key]:
-            rand_pool[pool_key] = random.sample(all_ids, k=len(all_ids))
-        idx = int(rand_pool[pool_key].pop())
-        built_entry = build_entry_from_api(idx, next((str(s["name"]) for s in species_index if int(s["id"]) == idx), str(idx)))
+        pick = random.choice(available_species)
+        idx = int(pick.get("id", 0))
+        name_guess = str(pick.get("name", "Random Pick"))
+        built_entry = build_entry_from_api(idx, name_guess) if idx else None
         entry = built_entry if built_entry else serialize_entry(random.choice(DATASET))
-        meta_parts = ["Random"]
-        extra_filters = [
-            GENERATION_LABELS.get(selected_generation, "") if selected_generation != "all" else "",
-            TYPE_LABELS.get(selected_type, "") if selected_type != "all" else "",
-            _format_filter_value(COLOR_FILTERS.get(color_filter)) if color_filter != "all" else "",
-            _format_filter_value(HABITAT_FILTERS.get(habitat_filter)) if habitat_filter != "all" else "",
-            _format_filter_value(SHAPE_FILTERS.get(shape_filter)) if shape_filter != "all" else "",
-            CAPTURE_BUCKETS.get(capture_filter, ("", None))[0] if capture_filter != "all" else "",
-        ]
-        meta_parts.extend([text for text in extra_filters if text])
-        meta_text = " · ".join(part for part in meta_parts if part)
-        if meta_text.strip().lower() == "random":
-            meta_text = ""
         add_to_history(
             make_history_entry(
-                entry["name"],
-                entry["name"],
+                entry.get("name", name_guess),
+                entry.get("name", name_guess),
                 [entry],
-                meta_text,
+                "Random pick",
                 [],
             )
         )
