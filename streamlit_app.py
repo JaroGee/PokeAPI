@@ -10,6 +10,7 @@ import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
@@ -279,6 +280,95 @@ def inject_clear_button_js() -> None:
     return
 
 
+def add_scroll_to_top_button() -> None:
+    """Render a reusable floating “Back to top” button."""
+    components.html(
+        """
+        <style>
+          #scroll-top-wrapper {
+            position: fixed;
+            right: 1.25rem;
+            bottom: 1.25rem;
+            z-index: 9999;
+            pointer-events: none;
+          }
+          #scroll-top-wrapper button {
+            pointer-events: auto;
+            border: none;
+            border-radius: 999px;
+            padding: 0.55rem 0.95rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            background: #ffde00;
+            color: #000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+          }
+          #scroll-top-wrapper.visible button {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        </style>
+
+        <div id="scroll-top-wrapper">
+          <button type="button" aria-label="Back to top">↑ Top</button>
+        </div>
+
+        <script>
+          (function() {
+            const wrapper = document.getElementById("scroll-top-wrapper");
+            const button = wrapper.querySelector("button");
+            const getContainer = () =>
+              document.querySelector("section.main") ||
+              document.querySelector('div[data-testid="stAppViewBlockContainer"]') ||
+              window;
+
+            let container = getContainer();
+
+            const scrollHandler = () => {
+              const offset = (container === window ? window.pageYOffset : container.scrollTop) || 0;
+              if (offset > 180) {
+                wrapper.classList.add("visible");
+              } else {
+                wrapper.classList.remove("visible");
+              }
+            };
+
+            const clickHandler = () => {
+              const target = getContainer();
+              (target === window ? window : target).scrollTo({ top: 0, behavior: "smooth" });
+            };
+
+            button.addEventListener("click", clickHandler);
+
+            const ensureListeners = () => {
+              const latest = getContainer();
+              if (latest !== container) {
+                if (container && container.removeEventListener) {
+                  container.removeEventListener("scroll", scrollHandler);
+                } else if (container === window) {
+                  window.removeEventListener("scroll", scrollHandler);
+                }
+                container = latest;
+              }
+              (container === window ? window : container).addEventListener("scroll", scrollHandler, { passive: true });
+            };
+
+            ensureListeners();
+            scrollHandler();
+
+            const observer = new MutationObserver(() => ensureListeners());
+            observer.observe(document.body, { childList: true, subtree: true });
+          })();
+        </script>
+        """,
+        height=0,
+    )
+
+
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
     for p in paths:
         try:
@@ -295,6 +385,7 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
     favicon_path = resolve_asset_path("PokeSearch_logo.png", base_path)
+    favicon_b64 = load_file_as_base64(favicon_path) if favicon_path else None
 
     st.set_page_config(
         page_title="PokéSearch!",
@@ -302,6 +393,17 @@ def set_page_metadata() -> Dict[str, str]:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
+
+    if favicon_b64:
+        st.markdown(
+            f"""
+            <link rel="icon" type="image/png" href="data:image/png;base64,{favicon_b64}">
+            <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,{favicon_b64}">
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-title" content="PokéSearch">
+            """,
+            unsafe_allow_html=True,
+        )
 
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)
@@ -498,12 +600,17 @@ def set_page_metadata() -> Dict[str, str]:
         margin-bottom: 1.25rem;
       }}
       .search-panel .section-label {{
-        font-size: 0.85rem;
+        display: inline-block;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        color: rgba(0,0,0,0.55);
+        color: #3b4cca;
         letter-spacing: 0.08em;
         margin-bottom: 0.35rem;
-        font-weight: 600;
+        font-weight: 700;
+        background: rgba(59,76,202,0.08);
+        padding: 0.25rem 0.65rem;
+        border-radius: 999px;
+        border: 1px solid rgba(59,76,202,0.25);
       }}
       .search-panel input,
       .search-panel select {{
@@ -1247,6 +1354,7 @@ def main() -> None:
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
                 st.session_state["enter_submit"] = True
+                st.session_state["scroll_to_results"] = True
                 st.rerun()
         st.markdown('<div class="pod-divider"></div>', unsafe_allow_html=True)
         with st.container():
@@ -1353,48 +1461,49 @@ def main() -> None:
                         chosen_entry = history_entries[idx]
                         restored_query = str(chosen_entry.get("query") or chosen_entry.get("label") or "")
                         st.session_state["search_prefill"] = restored_query
+                        st.session_state["scroll_to_results"] = True
                         st.rerun()
 
             generation_choice = st.selectbox(
                 "Generation",
                 list(GENERATION_FILTERS.keys()),
                 key="generation_filter",
-                format_func=lambda key: "Generation" if key == "all" else GENERATION_LABELS.get(key, key.title()),
+                format_func=lambda key: "Any generation" if key == "all" else GENERATION_LABELS.get(key, key.title()),
                 label_visibility="collapsed",
             )
             type_choice = st.selectbox(
                 "Type",
                 list(TYPE_FILTERS.keys()),
                 key="type_filter",
-                format_func=lambda key: "Type" if key == "all" else TYPE_LABELS.get(key, key.title()),
+                format_func=lambda key: "Any type" if key == "all" else TYPE_LABELS.get(key, key.title()),
                 label_visibility="collapsed",
             )
             color_choice = st.selectbox(
                 "Color",
                 list(COLOR_FILTERS.keys()),
                 key="color_filter",
-                format_func=lambda key: "Color" if key == "all" else key.replace("-", " ").title(),
+                format_func=lambda key: "Any color" if key == "all" else key.replace("-", " ").title(),
                 label_visibility="collapsed",
             )
             habitat_choice = st.selectbox(
                 "Habitat",
                 list(HABITAT_FILTERS.keys()),
                 key="habitat_filter",
-                format_func=lambda key: "Habitat" if key == "all" else key.replace("-", " ").title(),
+                format_func=lambda key: "Any habitat" if key == "all" else key.replace("-", " ").title(),
                 label_visibility="collapsed",
             )
             shape_choice = st.selectbox(
                 "Body Shape",
                 list(SHAPE_FILTERS.keys()),
                 key="shape_filter",
-                format_func=lambda key: "Body Shape" if key == "all" else key.replace("-", " ").title(),
+                format_func=lambda key: "Any body shape" if key == "all" else key.replace("-", " ").title(),
                 label_visibility="collapsed",
             )
             capture_choice = st.selectbox(
                 "Capture Rate",
                 list(CAPTURE_BUCKETS.keys()),
                 key="capture_filter",
-                format_func=lambda key: "Capture Rate" if key == "all" else CAPTURE_BUCKETS[key][0],
+                format_func=lambda key: "Any capture rate" if key == "all" else CAPTURE_BUCKETS[key][0],
                 label_visibility="collapsed",
             )
             st.markdown("</div>", unsafe_allow_html=True)
@@ -1441,6 +1550,9 @@ def main() -> None:
                 shortcuts["@shape"] = shape_filter.replace("-", " ").title()
             if capture_filter != "all":
                 shortcuts["@capture"] = CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]
+    with right_col:
+        st.markdown('<div id="results-anchor"></div>', unsafe_allow_html=True)
+
     results_container = right_col.container()
     with results_container:
         gallery_placeholder = st.empty()
@@ -1452,6 +1564,8 @@ def main() -> None:
 
     with history_container:
         render_history(pixel_icon_b64)
+
+    add_scroll_to_top_button()
 
     footer_logo = assets.get("pokeapi_logo")
     if footer_logo:
@@ -1499,27 +1613,29 @@ def main() -> None:
             gallery_placeholder.empty()
             with gallery_placeholder.container():
                 render_sprite_gallery(matches)
-            return
-        limit = len(matches)
-        built: List[Dict[str, object]] = []
-        for s in matches[:limit]:
-            built_entry = build_entry_from_api(int(s["id"]), str(s["name"]))
-            if built_entry:
-                built.append(built_entry)
-        serialized = built
-        label = query_trimmed or "Full Library"
-        filter_labels = [
-            ("Generation", selected_generation != "all", GENERATION_LABELS.get(selected_generation, "")),
-            ("Type", selected_type != "all", TYPE_LABELS.get(selected_type, "")),
-            ("Color", color_filter != "all", _format_filter_value(COLOR_FILTERS.get(color_filter))),
-            ("Habitat", habitat_filter != "all", _format_filter_value(HABITAT_FILTERS.get(habitat_filter))),
-            ("Shape", shape_filter != "all", _format_filter_value(SHAPE_FILTERS.get(shape_filter))),
-            ("Capture", capture_filter != "all", CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]),
-        ]
-        meta_parts = [text for _label, active, text in filter_labels if active and text]
-        meta_text = " · ".join(meta_parts)
-        add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
-        st.rerun()
+            st.session_state["scroll_to_results"] = True
+        else:
+            limit = len(matches)
+            built: List[Dict[str, object]] = []
+            for s in matches[:limit]:
+                built_entry = build_entry_from_api(int(s["id"]), str(s["name"]))
+                if built_entry:
+                    built.append(built_entry)
+            serialized = built
+            label = query_trimmed or "Full Library"
+            filter_labels = [
+                ("Generation", selected_generation != "all", GENERATION_LABELS.get(selected_generation, "")),
+                ("Type", selected_type != "all", TYPE_LABELS.get(selected_type, "")),
+                ("Color", color_filter != "all", _format_filter_value(COLOR_FILTERS.get(color_filter))),
+                ("Habitat", habitat_filter != "all", _format_filter_value(HABITAT_FILTERS.get(habitat_filter))),
+                ("Shape", shape_filter != "all", _format_filter_value(SHAPE_FILTERS.get(shape_filter))),
+                ("Capture", capture_filter != "all", CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]),
+            ]
+            meta_parts = [text for _label, active, text in filter_labels if active and text]
+            meta_text = " · ".join(meta_parts)
+            add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
+            st.session_state["scroll_to_results"] = True
+            st.rerun()
 
     if random_clicked:
         st.session_state["search_feedback"] = ""
@@ -1574,7 +1690,28 @@ def main() -> None:
                 [],
             )
         )
+        st.session_state["scroll_to_results"] = True
         st.rerun()
+
+    scroll_requested = st.session_state.pop("scroll_to_results", False)
+    if scroll_requested:
+        st.markdown(
+            """
+            <script>
+            (function() {
+              const anchor = document.getElementById('results-anchor');
+              if (!anchor) return;
+              const prefersMobile = window.matchMedia('(max-width: 820px)').matches || /Mobi|Android/i.test(navigator.userAgent);
+              if (!prefersMobile) return;
+              const offset = anchor.getBoundingClientRect().top + window.pageYOffset - 12;
+              window.requestAnimationFrame(() => {
+                window.scrollTo({ top: offset, behavior: 'smooth' });
+              });
+            })();
+            </script>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 if __name__ == "__main__":
