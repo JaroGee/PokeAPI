@@ -1359,43 +1359,43 @@ def main() -> None:
                 "Generation",
                 list(GENERATION_FILTERS.keys()),
                 key="generation_filter",
-                format_func=lambda key: "" if key == "all" else GENERATION_LABELS.get(key, key.title()),
-                label_visibility="visible",
+                format_func=lambda key: "Generation" if key == "all" else GENERATION_LABELS.get(key, key.title()),
+                label_visibility="collapsed",
             )
             type_choice = st.selectbox(
                 "Type",
                 list(TYPE_FILTERS.keys()),
                 key="type_filter",
-                format_func=lambda key: "" if key == "all" else TYPE_LABELS.get(key, key.title()),
-                label_visibility="visible",
+                format_func=lambda key: "Type" if key == "all" else TYPE_LABELS.get(key, key.title()),
+                label_visibility="collapsed",
             )
             color_choice = st.selectbox(
                 "Color",
                 list(COLOR_FILTERS.keys()),
                 key="color_filter",
-                format_func=lambda key: "" if key == "all" else key.replace("-", " ").title(),
-                label_visibility="visible",
+                format_func=lambda key: "Color" if key == "all" else key.replace("-", " ").title(),
+                label_visibility="collapsed",
             )
             habitat_choice = st.selectbox(
                 "Habitat",
                 list(HABITAT_FILTERS.keys()),
                 key="habitat_filter",
-                format_func=lambda key: "" if key == "all" else key.replace("-", " ").title(),
-                label_visibility="visible",
+                format_func=lambda key: "Habitat" if key == "all" else key.replace("-", " ").title(),
+                label_visibility="collapsed",
             )
             shape_choice = st.selectbox(
                 "Body Shape",
                 list(SHAPE_FILTERS.keys()),
                 key="shape_filter",
-                format_func=lambda key: "" if key == "all" else key.replace("-", " ").title(),
-                label_visibility="visible",
+                format_func=lambda key: "Body Shape" if key == "all" else key.replace("-", " ").title(),
+                label_visibility="collapsed",
             )
             capture_choice = st.selectbox(
                 "Capture Rate",
                 list(CAPTURE_BUCKETS.keys()),
                 key="capture_filter",
-                format_func=lambda key: "" if key == "all" else CAPTURE_BUCKETS[key][0],
-                label_visibility="visible",
+                format_func=lambda key: "Capture Rate" if key == "all" else CAPTURE_BUCKETS[key][0],
+                label_visibility="collapsed",
             )
             st.markdown("</div>", unsafe_allow_html=True)
 
