@@ -5,13 +5,11 @@ import html
 import random
 import textwrap
 from datetime import datetime
-import json
 import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
 import streamlit as st
-import streamlit.components.v1 as components
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
@@ -51,7 +49,6 @@ except Exception:  # pragma: no cover - run as script
 
 PAGE_SIZE = 8
 MAX_HISTORY = 64
-RESULTS_ANCHOR_ID = "results-anchor"
 
 COLOR_PALETTE: Dict[str, str] = {
     "red": "#ff0000",
@@ -273,8 +270,6 @@ def ensure_state() -> None:
         st.session_state["force_search_query"] = None
     if "clear_request" not in st.session_state:
         st.session_state["clear_request"] = False
-    if "scroll_to_results" not in st.session_state:
-        st.session_state["scroll_to_results"] = False
 
 
 def _mark_enter_submit() -> None:
@@ -282,81 +277,6 @@ def _mark_enter_submit() -> None:
 
 
 def inject_clear_button_js() -> None:
-    return
-
-
-def request_results_scroll() -> None:
-    st.session_state["scroll_to_results"] = True
-
-
-def perform_results_scroll(force: bool = False) -> None:
-    should_scroll = force or st.session_state.get("scroll_to_results", False)
-    if should_scroll:
-        st.session_state["scroll_to_results"] = False
-    _inject_scroll_helpers(should_scroll)
-    inject_selectbox_theme()
-
-
-def _inject_scroll_helpers(should_scroll: bool) -> None:
-    config = {"anchorId": RESULTS_ANCHOR_ID, "shouldScroll": should_scroll}
-    payload = json.dumps(config)
-    components.html(
-        f"""
-        <script>
-        (function initAutoScroll() {{
-            const config = {payload};
-            const frameWin = window;
-            let hostWin = frameWin;
-            try {{
-                if (frameWin.parent && frameWin.parent.document) {{
-                    hostWin = frameWin.parent;
-                }}
-            }} catch (err) {{
-                hostWin = frameWin;
-            }}
-            const win = hostWin;
-            const doc = win.document;
-            if (!doc || !doc.body) {{
-                return;
-            }}
-
-            const scrollToResults = () => {{
-                const anchor = doc.getElementById(config.anchorId);
-                if (!anchor) {{
-                    return false;
-                }}
-                try {{
-                    anchor.scrollIntoView({{ behavior: "smooth", block: "start" }});
-                }} catch (error) {{
-                    const top = anchor.getBoundingClientRect().top + (win.scrollY || 0);
-                    win.scrollTo({{ top, behavior: "smooth" }});
-                }}
-                return true;
-            }};
-
-            if (config.shouldScroll) {{
-                let attempts = 0;
-                const maxAttempts = 160;
-                const tick = () => {{
-                    if (scrollToResults()) {{
-                        return;
-                    }}
-                    if (attempts < maxAttempts) {{
-                        attempts += 1;
-                        win.requestAnimationFrame(tick);
-                    }}
-                }};
-                tick();
-            }}
-        }})();
-        </script>
-        """,
-        height=0,
-        width=0,
-    )
-
-
-def inject_selectbox_theme() -> None:
     return
 
 
@@ -583,18 +503,27 @@ def set_page_metadata() -> Dict[str, str]:
         margin-bottom: 0.35rem;
         font-weight: 600;
       }}
-      .search-panel .search-input {{
+      .search-panel input,
+      .search-panel select {{
         border-radius: 22px;
         border: 2px solid rgba(0,0,0,0.12);
         min-height: 54px;
         font-size: 1rem;
       }}
-      .stTextInput>div>div>input {{
+      input,
+      textarea,
+      select,
+      [role="combobox"],
+      [data-baseweb="select"] > div {{
         background: #ffffff !important;
         color: #111111 !important;
+      }}
+      input,
+      [data-baseweb="select"] > div {{
         border: 1px solid rgba(0,0,0,0.25) !important;
       }}
-      .stTextInput>div>div>input::placeholder {{
+      input::placeholder,
+      textarea::placeholder {{
         color: rgba(0,0,0,0.55) !important;
       }}
       .search-panel .button-row {{
@@ -917,10 +846,6 @@ def set_page_metadata() -> Dict[str, str]:
       button[aria-label="View fullscreen"],
       [data-testid="fullscreenButton"] {{
         display: none !important;
-      }}
-
-      #{RESULTS_ANCHOR_ID} {{
-        scroll-margin-top: 14px;
       }}
 
       /* Hide Streamlit input hint like "Press Enter to submit" globally */
@@ -1521,7 +1446,6 @@ def main() -> None:
 
     results_container = right_col.container()
     with results_container:
-        st.markdown(f'<div id="{RESULTS_ANCHOR_ID}"></div>', unsafe_allow_html=True)
         gallery_placeholder = st.empty()
         history_container = st.container()
 
@@ -1537,7 +1461,6 @@ def main() -> None:
                 st.info("No Pokémon match these filters yet.")
     with history_container:
         render_history(pixel_icon_b64)
-    perform_results_scroll()
 
     footer_logo = assets.get("pokeapi_logo")
     if footer_logo:
@@ -1585,7 +1508,6 @@ def main() -> None:
             gallery_placeholder.empty()
             with gallery_placeholder.container():
                 render_sprite_gallery(matches)
-            perform_results_scroll(force=True)
             return
         limit = len(matches)
         built: List[Dict[str, object]] = []
@@ -1612,7 +1534,6 @@ def main() -> None:
         if meta_text.strip().lower() == "search":
             meta_text = ""
         add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, shortcut_list))
-        request_results_scroll()
         st.rerun()
 
     if random_clicked:
@@ -1660,7 +1581,6 @@ def main() -> None:
                 [],
             )
         )
-        request_results_scroll()
         st.rerun()
 
 
