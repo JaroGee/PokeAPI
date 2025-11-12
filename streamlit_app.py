@@ -544,14 +544,19 @@ def set_page_metadata() -> Dict[str, str]:
         color-scheme: light !important;
       }}
       [data-baseweb="popover"],
+      [data-baseweb="popover"] *,
+      [data-baseweb="select"] *,
       [data-baseweb="popover"] [role="listbox"] {{
         background: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
         color-scheme: light !important;
+        filter: none !important;
+        mix-blend-mode: normal !important;
       }}
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
+        background-color: #ffffff !important;
         color: #111111 !important;
       }}
       [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
