@@ -333,6 +333,8 @@ def set_page_metadata() -> Dict[str, str]:
         --poke-dark-red: {colors["dark_red"]};
         --poke-blue: {colors["blue"]};
         --poke-yellow: {colors["yellow"]};
+
+        
         --poke-gold: {colors["gold"]};
       }}
       html, body, [data-testid="stAppRoot"], [data-testid="stAppViewContainer"],
@@ -509,6 +511,24 @@ def set_page_metadata() -> Dict[str, str]:
         border: 2px solid rgba(0,0,0,0.12);
         min-height: 54px;
         font-size: 1rem;
+      }}
+      [data-testid="stTextInput"] div[data-baseweb="input"],
+      [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child,
+      [data-testid="stTextInput"] div[data-baseweb="input"] input {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        border-radius: 22px !important;
+        border: 2px solid rgba(17,17,17,0.18) !important;
+        color-scheme: light !important;
+        caret-color: #3b4cca !important;
+        box-shadow: none !important;
+      }}
+      [data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {{
+        border-color: #3b4cca !important;
+        box-shadow: 0 0 0 2px rgba(59,76,202,0.2) !important;
+      }}
+      [data-testid="stTextInput"] input::placeholder {{
+        color: rgba(0,0,0,0.55) !important;
       }}
       body [data-testid="stAppViewContainer"] select {{
         color-scheme: light;
