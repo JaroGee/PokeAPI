@@ -563,13 +563,15 @@ def set_page_metadata() -> Dict[str, str]:
         caret-color: transparent !important;
         color-scheme: light !important;
       }}
+      [data-baseweb="layer"],
       [data-baseweb="popover"] {{
-        background: transparent !important;
+        background-color: transparent !important;
         color-scheme: light !important;
       }}
       [data-baseweb="popover"] [role="listbox"],
       [data-baseweb="select"] *,
-      [data-baseweb="popover"] [role="option"] {{
+      [data-baseweb="popover"] [role="option"],
+      [data-baseweb="popover"] [data-baseweb="option"] {{
         background: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
@@ -578,18 +580,19 @@ def set_page_metadata() -> Dict[str, str]:
         color-scheme: light !important;
       }}
       [data-baseweb="popover"] [role="option"],
-      [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
+      [data-baseweb="popover"] [data-baseweb="option"],
+      [data-baseweb="popover"] [role="option"] > div,
+      [data-baseweb="popover"] [data-baseweb="option"] > div {{
         background-color: #ffffff !important;
         color: #111111 !important;
       }}
-      [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
+      [data-baseweb="popover"] [role="option"][aria-selected="true"],
+      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"] {{
         background-color: rgba(255,222,0,0.45) !important;
       }}
-      [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover {{
+      [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover,
+      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
         background-color: rgba(59,76,202,0.12) !important;
-      }}
-      [data-baseweb="popover"] [role="option"] > div {{
-        background: transparent !important;
       }}
       .search-panel .button-row {{
         display: flex;
