@@ -563,16 +563,19 @@ def set_page_metadata() -> Dict[str, str]:
         caret-color: transparent !important;
         color-scheme: light !important;
       }}
-      [data-baseweb="popover"],
-      [data-baseweb="popover"] *,
+      [data-baseweb="popover"] {{
+        background: transparent !important;
+        color-scheme: light !important;
+      }}
+      [data-baseweb="popover"] [role="listbox"],
       [data-baseweb="select"] *,
-      [data-baseweb="popover"] [role="listbox"] {{
+      [data-baseweb="popover"] [role="option"] {{
         background: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
-        color-scheme: light !important;
         filter: none !important;
         mix-blend-mode: normal !important;
+        color-scheme: light !important;
       }}
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
@@ -584,6 +587,9 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover {{
         background-color: rgba(59,76,202,0.12) !important;
+      }}
+      [data-baseweb="popover"] [role="option"] > div {{
+        background: transparent !important;
       }}
       .search-panel .button-row {{
         display: flex;
