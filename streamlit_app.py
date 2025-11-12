@@ -340,6 +340,7 @@ def set_page_metadata() -> Dict[str, str]:
         background-color: #ffffff !important;
         color: #000000 !important;
         min-height: 100vh;
+        color-scheme: light !important;
       }}
       [data-testid="stAppRoot"], [data-testid="stAppViewContainer"],
       [data-testid="stAppViewContainer"] > .main, html, body {{
@@ -532,17 +533,22 @@ def set_page_metadata() -> Dict[str, str]:
       [data-testid="stSelectbox"] input::placeholder {{
         color: transparent !important;
       }}
+      [data-testid="stSelectbox"] div[data-baseweb="select"],
+      [data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child,
       [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {{
         background-color: #ffffff !important;
         color: #111111 !important;
         border-radius: 22px !important;
         border: 2px solid rgba(17,17,17,0.18) !important;
         caret-color: transparent !important;
+        color-scheme: light !important;
       }}
+      [data-baseweb="popover"],
       [data-baseweb="popover"] [role="listbox"] {{
         background: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
+        color-scheme: light !important;
       }}
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
