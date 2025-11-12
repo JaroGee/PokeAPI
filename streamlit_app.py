@@ -9,9 +9,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Sequence, Iterable, Tuple, Set
-from difflib import get_close_matches
-
+from typing import Dict, List, Sequence, Tuple, Set
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -54,6 +52,14 @@ except Exception:  # pragma: no cover - run as script
 PAGE_SIZE = 8
 MAX_HISTORY = 64
 RESULTS_ANCHOR_ID = "results-anchor"
+
+COLOR_PALETTE: Dict[str, str] = {
+    "red": "#ff0000",
+    "dark_red": "#cc0000",
+    "blue": "#3b4cca",
+    "yellow": "#ffde00",
+    "gold": "#b3a125",
+}
 
 GENERATION_FILTERS: Dict[str, tuple[int, int] | None] = {
     "all": None,
@@ -279,49 +285,6 @@ def inject_clear_button_js() -> None:
     return
 
 
-def attach_search_suggestions(options: Sequence[Tuple[str, str]]) -> None:
-    """Attach an HTML datalist to the search input for inline suggestions and hide hints."""
-    datalist_id = "search-suggestions"
-    option_markup = "".join(
-        f"<option value=\"{html.escape(value)}\" label=\"{html.escape(label)}\"></option>"
-        for label, value in options
-    )
-    option_payload = json.dumps(option_markup)
-    list_command = (
-        f"input.setAttribute('list', '{datalist_id}');" if options else "input.removeAttribute('list');"
-    )
-    script = f"""
-        <script>
-        (function applyEnhancements() {{
-            const doc = window.document;
-            let datalist = doc.getElementById("{datalist_id}");
-            if (!datalist) {{
-                datalist = doc.createElement("datalist");
-                datalist.id = "{datalist_id}";
-                doc.body.appendChild(datalist);
-            }}
-            datalist.innerHTML = {option_payload};
-            const input = doc.querySelector('input[aria-label="Search the Pokédex"]');
-            if (input) {{
-                {list_command}
-            }}
-            const hideHints = () => {{
-                const hintNodes = doc.querySelectorAll('[data-testid="stTextInputInstructions"], [data-testid="InputInstructions"], div[aria-live="polite"]');
-                hintNodes.forEach(node => {{
-                    if (node && node.textContent && node.textContent.toLowerCase().includes("press enter")) {{
-                        node.style.display = "none";
-                    }}
-                }});
-            }};
-            hideHints();
-            const hintInterval = setInterval(hideHints, 300);
-            setTimeout(() => clearInterval(hintInterval), 4000);
-        }})();
-        </script>
-    """
-    st.markdown(script, unsafe_allow_html=True)
-
-
 def request_results_scroll() -> None:
     st.session_state["scroll_to_results"] = True
 
@@ -421,16 +384,18 @@ def set_page_metadata() -> Dict[str, str]:
         initial_sidebar_state="collapsed",
     )
 
-    bg_candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
-    bg_image, bg_mime = _load_first_image_base64(bg_candidates)
-    cursor_style = "cursor: auto !important;"
+    candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
+    bg_image, bg_mime = _load_first_image_base64(candidates)
+    cursor_image, cursor_mime = (None, "image/png")
     pokeapi_logo_path = base_path / "static" / "assets" / "pokeapi_256.png"
     if not pokeapi_logo_path.exists():
         pokeapi_logo_path = resolve_asset_path("pokeapi_256.png", base_path)
     pokeapi_logo = load_file_as_base64(pokeapi_logo_path) if pokeapi_logo_path and pokeapi_logo_path.exists() else None
-
-    primary_color = "#1d4ed8"
-    highlight_color = "#f97316"
+    cursor_style = (
+        f'cursor: url("data:{cursor_mime};base64,{cursor_image}") 16 16, auto !important;'
+        if cursor_image
+        else "cursor: auto !important;"
+    )
     bg_style = (
         f'background: linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.8)), '
         f'url("data:{bg_mime};base64,{bg_image}") !important;\n'
@@ -441,8 +406,16 @@ def set_page_metadata() -> Dict[str, str]:
         if bg_image
         else ""
     )
+    colors = COLOR_PALETTE
     custom_css = f"""
     <style>
+      :root {{
+        --poke-red: {colors["red"]};
+        --poke-dark-red: {colors["dark_red"]};
+        --poke-blue: {colors["blue"]};
+        --poke-yellow: {colors["yellow"]};
+        --poke-gold: {colors["gold"]};
+      }}
       html, body, [data-testid="stAppRoot"], [data-testid="stAppViewContainer"],
       [data-testid="stAppViewContainer"] > .main {{
         background-color: #ffffff !important;
@@ -463,14 +436,14 @@ def set_page_metadata() -> Dict[str, str]:
       .poke-card {{
         background: rgba(255, 255, 255, 0.96);
         border-radius: 20px;
-        border: 1px solid rgba(15, 23, 42, 0.12);
-        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+        border: 1px solid rgba(59, 76, 202, 0.15);
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
         padding: 1.4rem;
         margin-bottom: 1.25rem;
       }}
       .history-group {{
-        background: linear-gradient(135deg, rgba(29, 78, 216, 0.08), rgba(14, 165, 233, 0.12));
-        border: 1px solid rgba(29, 78, 216, 0.18);
+        background: linear-gradient(135deg, rgba(59, 76, 202, 0.12), rgba(255, 222, 0, 0.16));
+        border: 1px solid rgba(59, 76, 202, 0.18);
         border-radius: 24px;
         padding: 1.35rem;
         margin-bottom: 1.35rem;
@@ -484,7 +457,7 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       .history-header h3 {{
         margin: 0;
-        color: {primary_color};
+        color: var(--poke-blue);
         font-size: 1.3rem;
       }}
       .history-meta {{
@@ -514,7 +487,7 @@ def set_page_metadata() -> Dict[str, str]:
       .card-header .name {{
         font-size: 1.2rem;
         font-weight: 700;
-        color: {primary_color};
+        color: var(--poke-blue);
       }}
       .card-header .meta {{
         font-size: 0.9rem;
@@ -543,14 +516,14 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       .section-block {{
         background: rgba(255, 255, 255, 0.94);
-        border: 1px solid rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(179, 161, 37, 0.28);
         border-radius: 15px;
         padding: 0.65rem 0.85rem;
       }}
       .section-title {{
         margin: 0 0 0.45rem;
         font-size: 0.9rem;
-        color: {highlight_color};
+        color: var(--poke-gold);
         letter-spacing: 0.03em;
         text-transform: uppercase;
         font-weight: 600;
@@ -567,10 +540,10 @@ def set_page_metadata() -> Dict[str, str]:
         min-height: 48px;
         letter-spacing: 0.01em;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
-        background: {primary_color} !important;
-        color: #ffffff !important;
-        border: 2px solid rgba(15,23,42,0.15) !important;
-        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.2) !important;
+        background: #ffde00 !important;
+        color: #000000 !important;
+        border: 2px solid rgba(0,0,0,0.18) !important;
+        box-shadow: 0 10px 18px rgba(0, 0, 0, 0.2) !important;
         white-space: nowrap;
         min-width: 90px;
       }}
@@ -615,6 +588,14 @@ def set_page_metadata() -> Dict[str, str]:
         border: 2px solid rgba(0,0,0,0.12);
         min-height: 54px;
         font-size: 1rem;
+      }}
+      .stTextInput>div>div>input {{
+        background: #ffffff !important;
+        color: #111111 !important;
+        border: 1px solid rgba(0,0,0,0.25) !important;
+      }}
+      .stTextInput>div>div>input::placeholder {{
+        color: rgba(0,0,0,0.55) !important;
       }}
       .search-panel .button-row {{
         display: flex;
@@ -1093,70 +1074,6 @@ def _apply_additional_filters(
     return result
 
 
-def suggest_names(query: str, species: List[Dict[str, object]], limit: int = 8) -> List[Tuple[str, str]]:
-    query_norm = unicodedata.normalize("NFKD", query).encode("ascii", "ignore").decode("ascii").lower()
-    if not query_norm:
-        return []
-
-    processed: List[Dict[str, object]] = []
-    for entry in species:
-        raw_name = str(entry.get("name", "")).strip()
-        if not raw_name:
-            continue
-        pretty = raw_name.title()
-        ascii_name = unicodedata.normalize("NFKD", raw_name).encode("ascii", "ignore").decode("ascii").lower()
-        processed.append(
-            {
-                "pretty": pretty,
-                "ascii": ascii_name,
-                "lower": raw_name.lower(),
-                "id": int(entry.get("id", 0)),
-            }
-        )
-
-    def _label(record: Dict[str, object]) -> Tuple[str, str]:
-        pretty_name = str(record["pretty"])
-        pid = int(record["id"])
-        label = f"{pretty_name} · #{pid:03d}" if pid else pretty_name
-        return label, pretty_name
-
-    results: List[Tuple[str, str]] = []
-    seen_ids: set[int] = set()
-
-    def _append(records: Iterable[Dict[str, object]]) -> None:
-        for record in records:
-            pid = int(record["id"])
-            if pid in seen_ids:
-                continue
-            seen_ids.add(pid)
-            results.append(_label(record))
-            if len(results) >= limit:
-                return
-
-    prefix_matches = [record for record in processed if record["ascii"].startswith(query_norm)]
-    substring_matches = [record for record in processed if query_norm in record["ascii"]]
-
-    if query_norm.isdigit():
-        numeric_matches = [
-            record
-            for record in processed
-            if str(record["id"]).startswith(query_norm)
-        ]
-    else:
-        numeric_matches = []
-
-    ascii_lookup = {record["ascii"]: record for record in processed}
-    close_names = get_close_matches(query_norm, list(ascii_lookup.keys()), n=limit, cutoff=0.45)
-    close_matches = [ascii_lookup[name] for name in close_names if name in ascii_lookup]
-
-    for bucket in (prefix_matches, numeric_matches, substring_matches, close_matches):
-        _append(bucket)
-        if len(results) >= limit:
-            break
-
-    return results[:limit]
-
-
 def _format_filter_value(value: str | None) -> str:
     if not value:
         return ""
@@ -1341,14 +1258,12 @@ def main() -> None:
     ensure_state()
 
     base_path = Path(__file__).parent
-    pixel_icon_b64 = load_file_as_base64(base_path / "static" / "assets" / "pixel_pokemon.svg")
-    if not pixel_icon_b64:
-        fallback_svg = (
-            "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>"
-            "<rect width='16' height='16' fill='#ffde00'/>"
-            "</svg>"
-        )
-        pixel_icon_b64 = base64.b64encode(fallback_svg.encode("utf-8")).decode("utf-8")
+    fallback_svg = (
+        "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>"
+        "<rect width='16' height='16' fill='#ffde00'/>"
+        "</svg>"
+    )
+    pixel_icon_b64 = base64.b64encode(fallback_svg.encode("utf-8")).decode("utf-8")
 
     species_index = load_species_index()
     sprite_param = st.query_params.get("sprite")
@@ -1603,13 +1518,6 @@ def main() -> None:
             )
 
             shortcuts = {}
-
-            if query_trimmed:
-                suggestion_payload = suggest_names(query_trimmed, filtered_species_index)
-            else:
-                suggestion_payload = []
-
-            attach_search_suggestions(suggestion_payload)
 
     results_container = right_col.container()
     with results_container:
