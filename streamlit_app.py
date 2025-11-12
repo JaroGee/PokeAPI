@@ -509,6 +509,20 @@ def set_page_metadata() -> Dict[str, str]:
         min-height: 54px;
         font-size: 1rem;
       }}
+      body [data-testid="stAppViewContainer"] select {{
+        color-scheme: light;
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        border: 2px solid rgba(17,17,17,0.22) !important;
+        border-radius: 22px !important;
+        min-height: 48px;
+        padding: 0.35rem 0.9rem;
+      }}
+      body [data-testid="stAppViewContainer"] select option,
+      body [data-testid="stAppViewContainer"] select optgroup {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
+      }}
       [data-testid="stSelectbox"] input {{
         pointer-events: none !important;
         caret-color: transparent !important;
@@ -517,10 +531,26 @@ def set_page_metadata() -> Dict[str, str]:
       [data-testid="stSelectbox"] input::placeholder {{
         color: transparent !important;
       }}
+      [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        border-radius: 22px !important;
+        border: 2px solid rgba(17,17,17,0.18) !important;
+      }}
       [data-baseweb="popover"] [role="listbox"] {{
         background: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
+      }}
+      [data-baseweb="popover"] [role="option"],
+      [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
+        color: #111111 !important;
+      }}
+      [data-baseweb="popover"] [role="option"][aria-selected="true"] {{
+        background-color: rgba(255,222,0,0.45) !important;
+      }}
+      [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover {{
+        background-color: rgba(59,76,202,0.12) !important;
       }}
       .search-panel .button-row {{
         display: flex;
