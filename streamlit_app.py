@@ -55,14 +55,6 @@ PAGE_SIZE = 8
 MAX_HISTORY = 64
 RESULTS_ANCHOR_ID = "results-anchor"
 
-COLOR_PALETTE: Dict[str, str] = {
-    "red": "#ff0000",
-    "dark_red": "#cc0000",
-    "blue": "#3b4cca",
-    "yellow": "#ffde00",
-    "gold": "#b3a125",
-}
-
 GENERATION_FILTERS: Dict[str, tuple[int, int] | None] = {
     "all": None,
     "gen1": (1, 151),
@@ -420,11 +412,7 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    favicon_path = None
-    for icon_name in ("pokesearch_flavicon.png", "pokesearch_favicon.png", "pokesearch.ico"):
-        favicon_path = resolve_asset_path(icon_name, base_path)
-        if favicon_path:
-            break
+    favicon_path = resolve_asset_path("PokeSearch_logo.png", base_path)
 
     st.set_page_config(
         page_title="PokéSearch!",
@@ -433,38 +421,16 @@ def set_page_metadata() -> Dict[str, str]:
         initial_sidebar_state="collapsed",
     )
 
-    candidate_names = [
-        "pokesearch_bg.jpeg",
-        "pokesearch_bg.jpg",
-        "pokesearch_bg.png",
-        "whos_that_pokemon.jpg",
-        "whos_that_pokemon.jpeg",
-        "whos_that_pokemon.png",
-        "who_is_that_pokemon.jpg",
-        "who_is_that_pokemon.jpeg",
-        "who_is_that_pokemon.png",
-        "bg.jpg",
-        "bg.jpeg",
-        "bg.png",
-        "Pikachu.jpeg",
-    ]
-    candidates: List[Path] = []
-    for name in candidate_names:
-        candidates.extend(asset_search_paths(name, base_path))
-    bg_image, bg_mime = _load_first_image_base64(candidates)
-    # Cursor image prefers PNG for better browser support; falls back to JPEG.
-    cursor_image, cursor_mime = _load_first_image_base64(
-        asset_search_paths("pokeball.png", base_path) + asset_search_paths("pokeball.jpeg", base_path)
-    )
+    bg_candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
+    bg_image, bg_mime = _load_first_image_base64(bg_candidates)
+    cursor_style = "cursor: auto !important;"
     pokeapi_logo_path = base_path / "static" / "assets" / "pokeapi_256.png"
     if not pokeapi_logo_path.exists():
         pokeapi_logo_path = resolve_asset_path("pokeapi_256.png", base_path)
     pokeapi_logo = load_file_as_base64(pokeapi_logo_path) if pokeapi_logo_path and pokeapi_logo_path.exists() else None
-    cursor_style = (
-        f'cursor: url("data:{cursor_mime};base64,{cursor_image}") 16 16, auto !important;'
-        if cursor_image
-        else "cursor: auto !important;"
-    )
+
+    primary_color = "#1d4ed8"
+    highlight_color = "#f97316"
     bg_style = (
         f'background: linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.8)), '
         f'url("data:{bg_mime};base64,{bg_image}") !important;\n'
@@ -475,16 +441,8 @@ def set_page_metadata() -> Dict[str, str]:
         if bg_image
         else ""
     )
-    colors = COLOR_PALETTE
     custom_css = f"""
     <style>
-      :root {{
-        --poke-red: {colors["red"]};
-        --poke-dark-red: {colors["dark_red"]};
-        --poke-blue: {colors["blue"]};
-        --poke-yellow: {colors["yellow"]};
-        --poke-gold: {colors["gold"]};
-      }}
       html, body, [data-testid="stAppRoot"], [data-testid="stAppViewContainer"],
       [data-testid="stAppViewContainer"] > .main {{
         background-color: #ffffff !important;
@@ -505,14 +463,14 @@ def set_page_metadata() -> Dict[str, str]:
       .poke-card {{
         background: rgba(255, 255, 255, 0.96);
         border-radius: 20px;
-        border: 1px solid rgba(59, 76, 202, 0.15);
-        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
         padding: 1.4rem;
         margin-bottom: 1.25rem;
       }}
       .history-group {{
-        background: linear-gradient(135deg, rgba(59, 76, 202, 0.12), rgba(255, 222, 0, 0.16));
-        border: 1px solid rgba(59, 76, 202, 0.18);
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.08), rgba(14, 165, 233, 0.12));
+        border: 1px solid rgba(29, 78, 216, 0.18);
         border-radius: 24px;
         padding: 1.35rem;
         margin-bottom: 1.35rem;
@@ -526,7 +484,7 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       .history-header h3 {{
         margin: 0;
-        color: var(--poke-blue);
+        color: {primary_color};
         font-size: 1.3rem;
       }}
       .history-meta {{
@@ -556,7 +514,7 @@ def set_page_metadata() -> Dict[str, str]:
       .card-header .name {{
         font-size: 1.2rem;
         font-weight: 700;
-        color: var(--poke-blue);
+        color: {primary_color};
       }}
       .card-header .meta {{
         font-size: 0.9rem;
@@ -585,14 +543,14 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       .section-block {{
         background: rgba(255, 255, 255, 0.94);
-        border: 1px solid rgba(179, 161, 37, 0.28);
+        border: 1px solid rgba(15, 23, 42, 0.08);
         border-radius: 15px;
         padding: 0.65rem 0.85rem;
       }}
       .section-title {{
         margin: 0 0 0.45rem;
         font-size: 0.9rem;
-        color: var(--poke-gold);
+        color: {highlight_color};
         letter-spacing: 0.03em;
         text-transform: uppercase;
         font-weight: 600;
@@ -609,10 +567,10 @@ def set_page_metadata() -> Dict[str, str]:
         min-height: 48px;
         letter-spacing: 0.01em;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
-        background: #ffde00 !important;
-        color: #000000 !important;
-        border: 2px solid rgba(0,0,0,0.18) !important;
-        box-shadow: 0 10px 18px rgba(0, 0, 0, 0.2) !important;
+        background: {primary_color} !important;
+        color: #ffffff !important;
+        border: 2px solid rgba(15,23,42,0.15) !important;
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.2) !important;
         white-space: nowrap;
         min-width: 90px;
       }}
