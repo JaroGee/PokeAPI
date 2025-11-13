@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+# 2024-06-18 cleanup: single favicon config, new search layout, removed scroll scripts.
 import base64
-import json
 import html
 import random
 import textwrap
@@ -10,8 +10,9 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
+
+from PIL import Image
 import streamlit as st
-import streamlit.components.v1 as components
 
 BASE_PATH = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_PATH.parent
@@ -36,7 +37,13 @@ def _resolve_favicon_path() -> Path | None:
 
 
 _FAVICON_PATH = _resolve_favicon_path()
-PAGE_ICON = str(_FAVICON_PATH) if _FAVICON_PATH else "️🔎"
+if _FAVICON_PATH:
+    try:
+        PAGE_ICON: object = Image.open(_FAVICON_PATH)
+    except Exception:
+        PAGE_ICON = str(_FAVICON_PATH)
+else:
+    PAGE_ICON = "️🔎"
 
 st.set_page_config(
     page_title="PokeSearch",
@@ -334,94 +341,6 @@ def inject_clear_button_js() -> None:
     return
 
 
-def add_scroll_to_top_button() -> None:
-    """Render a reusable floating “Back to top” button."""
-    components.html(
-        """
-        <style>
-          #scroll-top-wrapper {
-            position: fixed;
-            right: 1.25rem;
-            bottom: 1.25rem;
-            z-index: 9999;
-            pointer-events: none;
-          }
-          #scroll-top-wrapper button {
-            pointer-events: auto;
-            border: none;
-            border-radius: 999px;
-            padding: 0.55rem 0.95rem;
-            font-size: 0.9rem;
-            font-weight: 600;
-            background: #ffde00;
-            color: #000;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-            cursor: pointer;
-            opacity: 0;
-            transform: translateY(12px);
-            transition: opacity 0.25s ease, transform 0.25s ease;
-          }
-          #scroll-top-wrapper.visible button {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        </style>
-
-        <div id="scroll-top-wrapper">
-          <button type="button" aria-label="Back to top">↑ Top</button>
-        </div>
-
-        <script>
-          (function() {
-            const wrapper = document.getElementById("scroll-top-wrapper");
-            const button = wrapper.querySelector("button");
-            const getContainer = () =>
-              document.querySelector("section.main") ||
-              document.querySelector('div[data-testid="stAppViewBlockContainer"]') ||
-              window;
-
-            let container = getContainer();
-
-            const scrollHandler = () => {
-              const offset = (container === window ? window.pageYOffset : container.scrollTop) || 0;
-              if (offset > 180) {
-                wrapper.classList.add("visible");
-              } else {
-                wrapper.classList.remove("visible");
-              }
-            };
-
-            const clickHandler = () => {
-              const target = getContainer();
-              (target === window ? window : target).scrollTo({ top: 0, behavior: "smooth" });
-            };
-
-            button.addEventListener("click", clickHandler);
-
-            const ensureListeners = () => {
-              const latest = getContainer();
-              if (latest !== container) {
-                if (container && container.removeEventListener) {
-                  container.removeEventListener("scroll", scrollHandler);
-                } else if (container === window) {
-                  window.removeEventListener("scroll", scrollHandler);
-                }
-                container = latest;
-              }
-              (container === window ? window : container).addEventListener("scroll", scrollHandler, { passive: true });
-            };
-
-            ensureListeners();
-            scrollHandler();
-
-            const observer = new MutationObserver(() => ensureListeners());
-            observer.observe(document.body, { childList: true, subtree: true });
-          })();
-        </script>
-        """,
-        height=0,
-    )
-
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
     for p in paths:
         try:
@@ -437,68 +356,6 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    icon_specs = [
-        ("icon", "image/png", "16x16", "pokesearch_favicons/pokeball_favicon-16x16.png"),
-        ("icon", "image/png", "32x32", "pokesearch_favicons/pokeball_favicon-32x32.png"),
-        ("icon", "image/png", "192x192", "pokesearch_favicons/pokeball_android-chrome-192x192.png"),
-        ("icon", "image/png", "512x512", "pokesearch_favicons/pokeball_android-chrome-512x512.png"),
-        ("shortcut icon", "image/x-icon", None, "pokesearch_favicons/pokeball_favicon.ico"),
-        ("apple-touch-icon", "image/png", "180x180", "pokesearch_favicons/pokeball_apple-touch-icon.png"),
-    ]
-
-    icon_links: List[Dict[str, str]] = []
-    for rel, mime, sizes, filename in icon_specs:
-        path = resolve_asset_path(filename, base_path)
-        if not path:
-            continue
-        icon_b64 = load_file_as_base64(path)
-        if not icon_b64:
-            continue
-        icon_links.append(
-            {
-                "rel": rel,
-                "type": mime,
-                "sizes": sizes or "",
-                "href": f"data:{mime};base64,{icon_b64}",
-            }
-        )
-
-    if not icon_links and _FAVICON_PATH:
-        fallback_b64 = load_file_as_base64(_FAVICON_PATH)
-        if fallback_b64:
-            icon_links.append(
-                {
-                    "rel": "icon",
-                    "type": "image/png",
-                    "sizes": "32x32",
-                    "href": f"data:image/png;base64,{fallback_b64}",
-                }
-            )
-
-    if icon_links:
-        payload = json.dumps(icon_links)
-        st.markdown(
-            f"""
-            <script>
-            (function() {{
-              const links = {payload};
-              const head = document.head || document.getElementsByTagName("head")[0];
-              if (!head) return;
-              links.forEach((entry) => {{
-                if (!entry || !entry.rel || !entry.href) return;
-                const link = document.createElement("link");
-                link.rel = entry.rel;
-                if (entry.type) link.type = entry.type;
-                if (entry.sizes) link.sizes = entry.sizes;
-                link.href = entry.href;
-                head.appendChild(link);
-              }});
-            }})();
-            </script>
-            """,
-            unsafe_allow_html=True,
-        )
-
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)
     cursor_image, cursor_mime = (None, "image/png")
@@ -712,30 +569,6 @@ def set_page_metadata() -> Dict[str, str]:
         border: 2px solid rgba(0,0,0,0.12);
         min-height: 54px;
         font-size: 1rem;
-      }}
-      /* Keep the main search input aligned with the buttons on desktop */
-      .search-panel [data-testid="stTextInput"],
-      .search-panel [data-testid="stTextInput"] > div:first-child {{
-        width: 100% !important;
-      }}
-      [data-testid="stTextInput"] div[data-baseweb="input"],
-      [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child,
-      [data-testid="stTextInput"] div[data-baseweb="input"] input {{
-        width: 100% !important;
-        background-color: #ffffff !important;
-        color: #111111 !important;
-        border-radius: 22px !important;
-        border: 2px solid rgba(17,17,17,0.18) !important;
-        color-scheme: light !important;
-        caret-color: #3b4cca !important;
-        box-shadow: none !important;
-      }}
-      [data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {{
-        border-color: #3b4cca !important;
-        box-shadow: 0 0 0 2px rgba(59,76,202,0.2) !important;
-      }}
-      [data-testid="stTextInput"] input::placeholder {{
-        color: rgba(0,0,0,0.55) !important;
       }}
       body [data-testid="stAppViewContainer"] select {{
         color-scheme: light;
@@ -1426,6 +1259,7 @@ def render_history(icon_b64: str) -> None:
 
 
 def main() -> None:
+    print("Reached main() render start")
     assets = set_page_metadata()
     ensure_state()
 
@@ -1530,35 +1364,36 @@ def main() -> None:
                 st.session_state["force_search_query"] = None
                 st.session_state["clear_request"] = False
             st.markdown('<div class="section-label">Search</div>', unsafe_allow_html=True)
-            search_value = st.text_input(
-                "Search the Pokédex",
-                placeholder="Search Pokémon or #",
-                key="search_query_input",
-                label_visibility="collapsed",
-                autocomplete="off",
-                on_change=_mark_enter_submit,
-            )
-            search_cols = st.columns(3)
-            with search_cols[0]:
+            search_col, search_btn_col, random_btn_col, clear_btn_col = st.columns([4, 1, 1, 1])
+            with search_col:
+                search_value = st.text_input(
+                    "Search the Pokédex",
+                    placeholder="Search Pokémon or #",
+                    key="search_query_input",
+                    label_visibility="collapsed",
+                    autocomplete="off",
+                    on_change=_mark_enter_submit,
+                )
+            with search_btn_col:
                 search_clicked = st.button(
                     "Search",
                     use_container_width=True,
                     key="search_submit",
                 )
-            with search_cols[1]:
+            with random_btn_col:
                 random_clicked = st.button(
                     "Random",
                     use_container_width=True,
                     key="random_submit",
                 )
-            with search_cols[2]:
-                reset_clicked = st.button(
+            with clear_btn_col:
+                clear_clicked = st.button(
                     "Clear",
                     use_container_width=True,
                     key="clear_search",
                     disabled=not bool(search_value),
                 )
-            if reset_clicked:
+            if clear_clicked:
                 st.session_state["search_prefill"] = ""
                 st.session_state["search_query"] = ""
                 st.session_state["pending_lookup_id"] = None
@@ -1710,8 +1545,6 @@ def main() -> None:
     with history_container:
         render_history(pixel_icon_b64)
 
-    add_scroll_to_top_button()
-
     footer_logo = assets.get("pokeapi_logo")
     if footer_logo:
         powered_by = (
@@ -1831,6 +1664,8 @@ def main() -> None:
             )
         )
         st.rerun()
+
+    print("Completed main() render")
 
 
 if __name__ == "__main__":
