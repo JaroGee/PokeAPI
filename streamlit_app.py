@@ -12,6 +12,29 @@ from typing import Dict, List, Sequence, Tuple, Set
 import streamlit as st
 import streamlit.components.v1 as components
 
+BASE_PATH = Path(__file__).parent
+DEFAULT_FAVICON = BASE_PATH / "static" / "assets" / "PokeSearch_logo.png"
+
+def _resolve_favicon_path() -> Path | None:
+    candidates = [
+        BASE_PATH / "PokeSearch_logo.png",
+        DEFAULT_FAVICON,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+_FAVICON_PATH = _resolve_favicon_path()
+PAGE_ICON = str(_FAVICON_PATH) if _FAVICON_PATH else "️🔎"
+
+st.set_page_config(
+    page_title="PokéSearch!",
+    page_icon=PAGE_ICON,
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
     from PokeAPI import (
@@ -395,15 +418,8 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    favicon_path = resolve_asset_path("PokeSearch_logo.png", base_path)
+    favicon_path = resolve_asset_path("PokeSearch_logo.png", base_path) or _FAVICON_PATH
     favicon_b64 = load_file_as_base64(favicon_path) if favicon_path else None
-
-    st.set_page_config(
-        page_title="PokéSearch!",
-        page_icon=str(favicon_path) if favicon_path else "️🔎",
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )
 
     if favicon_b64:
         st.markdown(
@@ -724,11 +740,12 @@ def set_page_metadata() -> Dict[str, str]:
         padding: 0.35rem 0.25rem !important;
       }}
       /* Safari option <li> (.st-emotion-cache-qiev7j) sets border: 8px solid rgb(230,234,241); neutralize */
+      /* Safari renders each <li> with .st-emotion-cache-qiev7j / -xcuh4j and draws an 8px border */
       .st-emotion-cache-qiev7j,
-      .st-emotion-cache-xcuh4j {{
+      .st-emotion-cache-xcuh4j,
+      [data-baseweb="popover"] li {{
         border: 0 !important;
         box-shadow: none !important;
-        background-color: transparent !important;
       }}
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [data-baseweb="option"],
@@ -739,6 +756,13 @@ def set_page_metadata() -> Dict[str, str]:
         margin: 4px 6px !important;
         padding: 0.4rem 0.85rem !important;
         border: 1px solid transparent !important;
+      }}
+      /* Collapsed select shell (.st-emotion-cache-13k62yr) drew a black outline when active */
+      .st-emotion-cache-13k62yr {{
+        border: 2px solid rgba(17,17,17,0.18) !important;
+        border-radius: 22px !important;
+        box-shadow: none !important;
+        background-color: #ffffff !important;
       }}
       [data-baseweb="popover"] [role="option"] > div,
       [data-baseweb="popover"] [data-baseweb="option"] > div,
