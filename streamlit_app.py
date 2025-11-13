@@ -681,6 +681,8 @@ def set_page_metadata() -> Dict[str, str]:
         caret-color: transparent !important;
         color-scheme: light !important;
       }}
+      /* BaseWeb popover outer shell (was showing dark frame) */
+      .st-emotion-cache-1vjrt7f,
       [data-baseweb="popover"] {{
         background-color: transparent !important;
         color-scheme: light !important;
@@ -1771,11 +1773,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-      /* BaseWeb popover outer shell (was showing dark frame) */
-      .st-emotion-cache-1vjrt7f,
-      [data-baseweb="popover"] {{
-        border: none !important;
-        box-shadow: none !important;
-        outline: none !important;
-        background-color: transparent !important;
-      }}
