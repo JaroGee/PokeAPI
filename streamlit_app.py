@@ -681,7 +681,6 @@ def set_page_metadata() -> Dict[str, str]:
         caret-color: transparent !important;
         color-scheme: light !important;
       }}
-      [data-baseweb="layer"],
       [data-baseweb="popover"] {{
         background-color: transparent !important;
         color-scheme: light !important;
@@ -712,8 +711,7 @@ def set_page_metadata() -> Dict[str, str]:
         color-scheme: light !important;
       }}
       [data-baseweb="popover"] [role="listbox"],
-      [data-baseweb="menu"],
-      [role="listbox"] {{
+      [data-baseweb="menu"] {{
         background-color: transparent !important;
         border: none !important;
         box-shadow: none !important;
