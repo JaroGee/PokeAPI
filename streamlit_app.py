@@ -1771,3 +1771,11 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+      /* BaseWeb popover outer shell (was showing dark frame) */
+      .st-emotion-cache-1vjrt7f,
+      [data-baseweb="popover"] {{
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+        background-color: transparent !important;
+      }}
