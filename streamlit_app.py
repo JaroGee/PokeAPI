@@ -683,6 +683,7 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       /* BaseWeb popover outer shell (was showing dark frame) */
       .st-emotion-cache-1vjrt7f,
+      .st-emotion-cache-1oahn2n,
       [data-baseweb="popover"] {{
         background-color: transparent !important;
         color-scheme: light !important;
