@@ -41,11 +41,13 @@ try:
     from .pokeapi_live import (
         load_species_index,
         build_entry_from_api,
+        build_entries_from_api_batch,
     )
 except Exception:  # pragma: no cover - run as script
     from pokeapi_live import (
         load_species_index,
         build_entry_from_api,
+        build_entries_from_api_batch,
     )
 
 PAGE_SIZE = 8
@@ -678,7 +680,9 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] [role="listbox"],
       [data-baseweb="select"] *,
       [data-baseweb="popover"] [role="option"],
-      [data-baseweb="popover"] [data-baseweb="option"] {{
+      [data-baseweb="popover"] [data-baseweb="option"],
+      [data-baseweb="select-option"],
+      [data-baseweb="select-option"] * {{
         background: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
@@ -688,18 +692,26 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [data-baseweb="option"],
+      [data-baseweb="select-option"] {{
+        border-radius: 12px !important;
+        margin: 2px 8px;
+        padding: 0.35rem 0.75rem !important;
+      }}
       [data-baseweb="popover"] [role="option"] > div,
-      [data-baseweb="popover"] [data-baseweb="option"] > div {{
-        background-color: #ffffff !important;
-        color: #111111 !important;
+      [data-baseweb="popover"] [data-baseweb="option"] > div,
+      [data-baseweb="select-option"] > div {{
+        background: transparent !important;
       }}
       [data-baseweb="popover"] [role="option"][aria-selected="true"],
-      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"] {{
-        background-color: rgba(255,222,0,0.45) !important;
+      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"],
+      [data-baseweb="select-option"][aria-selected="true"] {{
+        background-color: rgba(255, 222, 0, 0.75) !important;
+        color: #111111 !important;
       }}
-      [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover,
-      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
-        background-color: rgba(59,76,202,0.12) !important;
+      [data-baseweb="popover"] [role="option"]:hover,
+      [data-baseweb="popover"] [data-baseweb="option"]:hover,
+      [data-baseweb="select-option"]:hover {{
+        background-color: rgba(59, 76, 202, 0.15) !important;
       }}
       .search-panel .button-row {{
         display: flex;
@@ -1614,28 +1626,25 @@ def main() -> None:
             with gallery_placeholder.container():
                 render_sprite_gallery(matches)
             st.session_state["scroll_to_results"] = True
-        else:
-            limit = len(matches)
-            built: List[Dict[str, object]] = []
-            for s in matches[:limit]:
-                built_entry = build_entry_from_api(int(s["id"]), str(s["name"]))
-                if built_entry:
-                    built.append(built_entry)
-            serialized = built
-            label = query_trimmed or "Full Library"
-            filter_labels = [
-                ("Generation", selected_generation != "all", GENERATION_LABELS.get(selected_generation, "")),
-                ("Type", selected_type != "all", TYPE_LABELS.get(selected_type, "")),
-                ("Color", color_filter != "all", _format_filter_value(COLOR_FILTERS.get(color_filter))),
-                ("Habitat", habitat_filter != "all", _format_filter_value(HABITAT_FILTERS.get(habitat_filter))),
-                ("Shape", shape_filter != "all", _format_filter_value(SHAPE_FILTERS.get(shape_filter))),
-                ("Capture", capture_filter != "all", CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]),
-            ]
-            meta_parts = [text for _label, active, text in filter_labels if active and text]
-            meta_text = " · ".join(meta_parts)
-            add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
-            st.session_state["scroll_to_results"] = True
-            st.rerun()
+            return
+
+        limit = len(matches)
+        batch_inputs = [(int(s["id"]), str(s["name"])) for s in matches[:limit]]
+        serialized = build_entries_from_api_batch(batch_inputs)
+        label = query_trimmed or "Full Library"
+        filter_labels = [
+            ("Generation", selected_generation != "all", GENERATION_LABELS.get(selected_generation, "")),
+            ("Type", selected_type != "all", TYPE_LABELS.get(selected_type, "")),
+            ("Color", color_filter != "all", _format_filter_value(COLOR_FILTERS.get(color_filter))),
+            ("Habitat", habitat_filter != "all", _format_filter_value(HABITAT_FILTERS.get(habitat_filter))),
+            ("Shape", shape_filter != "all", _format_filter_value(SHAPE_FILTERS.get(shape_filter))),
+            ("Capture", capture_filter != "all", CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]),
+        ]
+        meta_parts = [text for _label, active, text in filter_labels if active and text]
+        meta_text = " · ".join(meta_parts)
+        add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
+        st.session_state["scroll_to_results"] = True
+        st.rerun()
 
     if random_clicked:
         st.session_state["search_feedback"] = ""
