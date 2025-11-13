@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import html
 import random
 import textwrap
@@ -11,11 +12,6 @@ from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
 import streamlit as st
 import streamlit.components.v1 as components
-
-try:  # Pillow ships with Streamlit; fall back gracefully if missing.
-    from PIL import Image  # type: ignore
-except Exception:  # pragma: no cover - Streamlit environments include Pillow.
-    Image = None  # type: ignore
 
 BASE_PATH = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_PATH.parent
@@ -38,29 +34,12 @@ def _resolve_favicon_path() -> Path | None:
             return candidate
     return None
 
+
 _FAVICON_PATH = _resolve_favicon_path()
-
-
-def _load_page_icon_source() -> object | None:
-    """Load the icon once so Streamlit never falls back to the red crown."""
-    if not _FAVICON_PATH:
-        return None
-    if Image is not None:
-        try:
-            with _FAVICON_PATH.open("rb") as fh:
-                icon = Image.open(fh)
-                icon.load()
-            return icon
-        except Exception:
-            pass
-    return str(_FAVICON_PATH)
-
-
-_PAGE_ICON_SOURCE = _load_page_icon_source()
-PAGE_ICON = _PAGE_ICON_SOURCE if _PAGE_ICON_SOURCE else "️🔎"
+PAGE_ICON = str(_FAVICON_PATH) if _FAVICON_PATH else "️🔎"
 
 st.set_page_config(
-    page_title="PokéSearch!",
+    page_title="PokeSearch",
     page_icon=PAGE_ICON,
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -345,8 +324,6 @@ def ensure_state() -> None:
         st.session_state["force_search_query"] = None
     if "clear_request" not in st.session_state:
         st.session_state["clear_request"] = False
-    if "scroll_to_results" not in st.session_state:
-        st.session_state["scroll_to_results"] = False
 
 
 def _mark_enter_submit() -> None:
@@ -445,53 +422,6 @@ def add_scroll_to_top_button() -> None:
         height=0,
     )
 
-
-_MOBILE_SCROLL_SNIPPET = """
-<script>
-(function() {
-  const isMobile = window.matchMedia('(max-width: 900px)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (!isMobile) return;
-  const OFFSET = 16;
-  const MAX_ATTEMPTS = 10;
-  let attempts = 0;
-
-  const scrollToResults = () => {
-    const anchor = document.getElementById('results-anchor');
-    if (!anchor) return false;
-    const top = anchor.getBoundingClientRect().top + window.pageYOffset - OFFSET;
-    window.scrollTo({ top, behavior: 'smooth' });
-    return true;
-  };
-
-  const tryScroll = () => {
-    if (scrollToResults()) return;
-    attempts += 1;
-    if (attempts < MAX_ATTEMPTS) {
-      setTimeout(tryScroll, 140);
-    }
-  };
-
-  if (document.readyState === 'complete') {
-    setTimeout(tryScroll, 80);
-  } else {
-    window.addEventListener('load', () => setTimeout(tryScroll, 80), { once: true });
-  }
-})();
-</script>
-"""
-
-
-def trigger_mobile_scroll(force: bool | None = None) -> None:
-    """Lightweight mobile autoscroll that doesn't interfere with Streamlit reruns."""
-    should_scroll = bool(
-        force if force is not None else st.session_state.get("scroll_to_results")
-    )
-    if not should_scroll:
-        return
-    st.session_state["scroll_to_results"] = False
-    st.markdown(_MOBILE_SCROLL_SNIPPET, unsafe_allow_html=True)
-
-
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
     for p in paths:
         try:
@@ -516,8 +446,7 @@ def set_page_metadata() -> Dict[str, str]:
         ("apple-touch-icon", "image/png", "180x180", "pokesearch_favicons/pokeball_apple-touch-icon.png"),
     ]
 
-    icon_markup: List[str] = []
-    apple_icon_present = False
+    icon_links: List[Dict[str, str]] = []
     for rel, mime, sizes, filename in icon_specs:
         path = resolve_asset_path(filename, base_path)
         if not path:
@@ -525,56 +454,48 @@ def set_page_metadata() -> Dict[str, str]:
         icon_b64 = load_file_as_base64(path)
         if not icon_b64:
             continue
-        size_attr = f' sizes="{sizes}"' if sizes else ""
-        type_attr = f' type="{mime}"' if mime else ""
-        icon_markup.append(
-            f'<link rel="{rel}"{type_attr}{size_attr} href="data:{mime};base64,{icon_b64}">'
+        icon_links.append(
+            {
+                "rel": rel,
+                "type": mime,
+                "sizes": sizes or "",
+                "href": f"data:{mime};base64,{icon_b64}",
+            }
         )
-        if rel == "apple-touch-icon":
-            apple_icon_present = True
 
-    if not icon_markup and _FAVICON_PATH:
+    if not icon_links and _FAVICON_PATH:
         fallback_b64 = load_file_as_base64(_FAVICON_PATH)
         if fallback_b64:
-            icon_markup.append(
-                f'<link rel="icon" type="image/png" href="data:image/png;base64,{fallback_b64}">'
-            )
-            icon_markup.append(
-                f'<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,{fallback_b64}">'
-            )
-            apple_icon_present = True
-
-    if icon_markup:
-        apple_meta = ""
-        if apple_icon_present:
-            apple_meta = """
-            <meta name="apple-mobile-web-app-capable" content="yes">
-            <meta name="apple-mobile-web-app-title" content="PokéSearch">
-            """
-        cleanup_script = """
-        <script>
-        (function() {
-          const blocked = ["streamlit.io", "static.streamlit.io"];
-          const prune = () => {
-            const head = document.head || document.getElementsByTagName("head")[0];
-            if (!head) return;
-            head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((node) => {
-              const href = node.getAttribute("href") || "";
-              if (blocked.some((key) => href.includes(key))) {
-                if (node.parentNode) {
-                  node.parentNode.removeChild(node);
+            icon_links.append(
+                {
+                    "rel": "icon",
+                    "type": "image/png",
+                    "sizes": "32x32",
+                    "href": f"data:image/png;base64,{fallback_b64}",
                 }
-              }
-            });
-          };
-          prune();
-          const observer = new MutationObserver(prune);
-          observer.observe(document.head || document.documentElement, { childList: true, subtree: true });
-        })();
-        </script>
-        """
+            )
+
+    if icon_links:
+        payload = json.dumps(icon_links)
         st.markdown(
-            "\n".join(icon_markup) + cleanup_script + apple_meta,
+            f"""
+            <script>
+            (function() {{
+              const links = {payload};
+              const head = document.head || document.getElementsByTagName("head")[0];
+              if (!head) return;
+              links.forEach((entry) => {{
+                if (!entry || !entry.rel || !entry.href) return;
+                const link = document.createElement("link");
+                link.rel = entry.rel;
+                if (entry.type) link.type = entry.type;
+                if (entry.sizes) link.sizes = entry.sizes;
+                link.href = entry.href;
+                head.appendChild(link);
+              }});
+            }})();
+            </script>
+            """,
             unsafe_allow_html=True,
         )
 
@@ -940,15 +861,6 @@ def set_page_metadata() -> Dict[str, str]:
         fill: #777777 !important;
         color: #777777 !important;
         stroke: #777777 !important;
-      }}
-      .search-panel .button-row {{
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-      }}
-      .search-panel .button-row .stButton>button {{
-        min-width: 110px;
       }}
       div[aria-live="polite"],
       div[role="status"] {{
@@ -1626,7 +1538,6 @@ def main() -> None:
                 autocomplete="off",
                 on_change=_mark_enter_submit,
             )
-            st.markdown('<div class="button-row">', unsafe_allow_html=True)
             search_cols = st.columns(3)
             with search_cols[0]:
                 search_clicked = st.button(
@@ -1647,7 +1558,6 @@ def main() -> None:
                     key="clear_search",
                     disabled=not bool(search_value),
                 )
-            st.markdown("</div>", unsafe_allow_html=True)
             if reset_clicked:
                 st.session_state["search_prefill"] = ""
                 st.session_state["search_query"] = ""
@@ -1788,9 +1698,6 @@ def main() -> None:
                 shortcuts["@shape"] = shape_filter.replace("-", " ").title()
             if capture_filter != "all":
                 shortcuts["@capture"] = CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]
-    with right_col:
-        st.markdown('<div id="results-anchor"></div>', unsafe_allow_html=True)
-
     results_container = right_col.container()
     with results_container:
         gallery_placeholder = st.empty()
@@ -1851,8 +1758,6 @@ def main() -> None:
             gallery_placeholder.empty()
             with gallery_placeholder.container():
                 render_sprite_gallery(matches)
-            st.session_state["scroll_to_results"] = True
-            trigger_mobile_scroll(True)
             return
 
         limit = len(matches)
@@ -1870,7 +1775,6 @@ def main() -> None:
         meta_parts = [text for _label, active, text in filter_labels if active and text]
         meta_text = " · ".join(meta_parts)
         add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
-        st.session_state["scroll_to_results"] = True
         st.rerun()
 
     if random_clicked:
@@ -1926,10 +1830,7 @@ def main() -> None:
                 [],
             )
         )
-        st.session_state["scroll_to_results"] = True
         st.rerun()
-
-    trigger_mobile_scroll()
 
 
 if __name__ == "__main__":
