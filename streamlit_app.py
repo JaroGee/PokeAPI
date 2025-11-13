@@ -723,6 +723,13 @@ def set_page_metadata() -> Dict[str, str]:
         box-shadow: none !important;
         padding: 0.35rem 0.25rem !important;
       }}
+      /* Safari option <li> (.st-emotion-cache-qiev7j) sets border: 8px solid rgb(230,234,241); neutralize */
+      .st-emotion-cache-qiev7j,
+      .st-emotion-cache-xcuh4j {{
+        border: 0 !important;
+        box-shadow: none !important;
+        background-color: transparent !important;
+      }}
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [data-baseweb="option"],
       [data-baseweb="select-option"] {{
