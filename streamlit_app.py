@@ -688,39 +688,47 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-baseweb="popover"] [role="listbox"],
       [data-baseweb="select"] *,
+      [data-baseweb="select-option"] *,
       [data-baseweb="popover"] [role="option"],
-      [data-baseweb="popover"] [data-baseweb="option"],
-      [data-baseweb="select-option"],
-      [data-baseweb="select-option"] * {{
-        background: #ffffff !important;
-        color: #111111 !important;
-        box-shadow: none !important;
+      [data-baseweb="popover"] [data-baseweb="option"] {{
         filter: none !important;
         mix-blend-mode: normal !important;
         color-scheme: light !important;
       }}
+      [data-baseweb="popover"] [role="listbox"] {{
+        background-color: #ffffff !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(0,0,0,0.08) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+        padding: 0.35rem 0.25rem !important;
+      }}
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [data-baseweb="option"],
       [data-baseweb="select-option"] {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
         border-radius: 12px !important;
-        margin: 2px 8px;
-        padding: 0.35rem 0.75rem !important;
+        margin: 4px 6px !important;
+        padding: 0.4rem 0.85rem !important;
+        border: 1px solid transparent !important;
       }}
       [data-baseweb="popover"] [role="option"] > div,
       [data-baseweb="popover"] [data-baseweb="option"] > div,
       [data-baseweb="select-option"] > div {{
         background: transparent !important;
       }}
-      [data-baseweb="popover"] [role="option"][aria-selected="true"],
-      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"],
-      [data-baseweb="select-option"][aria-selected="true"] {{
-        background-color: rgba(255, 222, 0, 0.75) !important;
-        color: #111111 !important;
-      }}
       [data-baseweb="popover"] [role="option"]:hover,
       [data-baseweb="popover"] [data-baseweb="option"]:hover,
       [data-baseweb="select-option"]:hover {{
-        background-color: rgba(59, 76, 202, 0.15) !important;
+        background-color: rgba(59,76,202,0.08) !important;
+        color: #111111 !important;
+      }}
+      [data-baseweb="popover"] [role="option"][aria-selected="true"],
+      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"],
+      [data-baseweb="select-option"][aria-selected="true"] {{
+        background-color: #fff7c2 !important;
+        color: #111111 !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
       }}
       .search-panel .button-row {{
         display: flex;
