@@ -3,6 +3,7 @@ from __future__ import annotations
 import random
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Tuple
 
 # Note: Flask is optional for consumers that only need data/utilities (e.g., Streamlit app).
@@ -28,6 +29,9 @@ class Entry:
     description: str
     sections: Tuple[Section, ...]
 
+
+PACKAGE_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = PACKAGE_ROOT.parent
 
 CATEGORY_ORDER: Tuple[str, ...] = (
     "Pokémon",
@@ -301,7 +305,11 @@ SORT_STRATEGIES: Dict[str, Callable[[Entry], object]] = {
 
 # Flask app and routes are only defined if Flask is available in the environment.
 if Flask:  # type: ignore
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        template_folder=str(PROJECT_ROOT / "templates"),
+        static_folder=str(PROJECT_ROOT / "static"),
+    )
 else:  # pragma: no cover - allow importing without Flask installed
     app = None
 

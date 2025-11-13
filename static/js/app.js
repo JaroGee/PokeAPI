@@ -195,13 +195,26 @@ const renderHistory = () => {
   nextPageButton.disabled = currentPage >= totalPages - 1;
 };
 
+const scrollResultsIntoView = () => {
+  if (!historyContainer) return;
+  const target =
+    historyContainer.querySelector(".result-card") ||
+    historyContainer.querySelector(".history-group") ||
+    historyContainer;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+};
+
 const addToHistory = (group) => {
+  const hasResults = Array.isArray(group.entries) && group.entries.length > 0;
   searchHistory.unshift(group);
   if (searchHistory.length > MAX_HISTORY) {
     searchHistory = searchHistory.slice(0, MAX_HISTORY);
   }
   currentPage = 0;
   renderHistory();
+  if (hasResults) {
+    window.requestAnimationFrame(scrollResultsIntoView);
+  }
 };
 
 const performSearch = async () => {

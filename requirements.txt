@@ -1,4 +1,4 @@
 streamlit
-# Optional: only needed to run the Flask API in PokeAPI/PokeAPI.py
+# Optional: only needed to run the Flask API in app/PokeAPI.py
 flask
 requests

@@ -1,0 +1,40 @@
+# OS / editor junk
+.DS_Store
+Icon?
+.vscode/
+.idea/
+*.code-workspace
+
+# Streamlit metadata
+.streamlit/
+
+# Python environments
+.venv/
+venv/
+env/
+ENV/
+bin/
+include/
+lib/
+lib64/
+etc/
+share/
+pyvenv.cfg
+
+# Python caches and build artifacts
+__pycache__/
+.cache/
+*.py[cod]
+*.pyo
+*.so
+*.o
+*.out
+*.exe
+
+# Logs and installers
+*.log
+pip_install.log
+
+# Runtime caches
+cache/
+app/cache/

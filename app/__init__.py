@@ -1,0 +1,1 @@
+"""PokéSearch Streamlit app package."""

@@ -12,8 +12,10 @@ from typing import Dict, List, Sequence, Tuple, Set
 import streamlit as st
 import streamlit.components.v1 as components
 
-BASE_PATH = Path(__file__).parent
-DEFAULT_FAVICON = BASE_PATH / "static" / "assets" / "PokeSearch_logo.png"
+BASE_PATH = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_PATH.parent
+STATIC_DIR = PROJECT_ROOT / "static"
+DEFAULT_FAVICON = STATIC_DIR / "assets" / "PokeSearch_logo.png"
 
 def _resolve_favicon_path() -> Path | None:
     candidates = [
