@@ -686,12 +686,12 @@ def set_page_metadata() -> Dict[str, str]:
         background-color: transparent !important;
         color-scheme: light !important;
       }}
+      [data-baseweb="popover"],
       [data-baseweb="popover"] > div {{
         background-color: #ffffff !important;
         border-radius: 12px !important;
         border: 1px solid rgba(0,0,0,0.08) !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
-        overflow: hidden !important;
         outline: none !important;
       }}
       [data-baseweb="popover"]::before,
@@ -740,6 +740,13 @@ def set_page_metadata() -> Dict[str, str]:
         background-color: #fff7c2 !important;
         color: #111111 !important;
         border: 1px solid rgba(0,0,0,0.1) !important;
+      }}
+      [data-testid="stSelectbox"] [data-baseweb="select"] svg {{
+        display: block !important;
+        opacity: 1 !important;
+        fill: #777777 !important;
+        color: #777777 !important;
+        stroke: #777777 !important;
       }}
       .search-panel .button-row {{
         display: flex;
