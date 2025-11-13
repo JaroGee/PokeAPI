@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from threading import Lock
+from typing import Dict, List, Tuple, Optional, Sequence
 
 # Streamlit is optional at import time
 try:  # type: ignore[override]
@@ -15,6 +16,14 @@ import requests
 
 
 CACHE_TTL_SECONDS = 24 * 60 * 60
+RATE_LIMIT_SECONDS = 0.25
+_LAST_REQUEST_TS = 0.0
+_REQUEST_LOCK = Lock()
+
+_POKEMON_MEMORY_CACHE: Dict[int, Tuple[Dict, Dict]] = {}
+_ENTRY_MEMORY_CACHE: Dict[int, Dict[str, object]] = {}
+_ATTR_MEMORY_CACHE: Dict[int, Dict[str, object]] = {}
+_SPECIES_MEMORY_CACHE: Dict[int, Dict] = {}
 
 
 def _cache_dir() -> Path:
@@ -44,7 +53,13 @@ def _write_json(path: Path, data) -> None:
 
 
 def _get(url: str) -> Dict:
-    resp = requests.get(url, timeout=30)
+    global _LAST_REQUEST_TS
+    with _REQUEST_LOCK:
+        elapsed = time.time() - _LAST_REQUEST_TS
+        if elapsed < RATE_LIMIT_SECONDS:
+            time.sleep(RATE_LIMIT_SECONDS - elapsed)
+        resp = requests.get(url, timeout=30)
+        _LAST_REQUEST_TS = time.time()
     resp.raise_for_status()
     return resp.json()
 
@@ -129,18 +144,24 @@ def load_type_index(type_name: str) -> List[int]:
 def load_species_detail(pokemon_id: int) -> Optional[Dict]:
     cache_base = _cache_dir()
     s_path = cache_base / "species" / f"{pokemon_id}.json"
+    if pokemon_id in _SPECIES_MEMORY_CACHE:
+        return _SPECIES_MEMORY_CACHE[pokemon_id]
     species = _read_json(s_path)
     if species:
+        _SPECIES_MEMORY_CACHE[pokemon_id] = species
         return species
     try:
         species = _get(f"https://pokeapi.co/api/v2/pokemon-species/{pokemon_id}")
         _write_json(s_path, species)
+        _SPECIES_MEMORY_CACHE[pokemon_id] = species
         return species
     except Exception:
         return None
 
 
 def get_species_attributes(pokemon_id: int) -> Dict[str, object]:
+    if pokemon_id in _ATTR_MEMORY_CACHE:
+        return _ATTR_MEMORY_CACHE[pokemon_id]
     species = load_species_detail(pokemon_id) or {}
     color = (species.get("color") or {}).get("name") if isinstance(species.get("color"), dict) else species.get("color")
     habitat = (species.get("habitat") or {}).get("name") if isinstance(species.get("habitat"), dict) else species.get("habitat")
@@ -156,7 +177,7 @@ def get_species_attributes(pokemon_id: int) -> Dict[str, object]:
             name = group
         if name:
             egg_groups.append(str(name))
-    return {
+    attrs = {
         "color": (color or "").lower(),
         "habitat": (habitat or "").lower(),
         "shape": (shape or "").lower(),
@@ -164,6 +185,8 @@ def get_species_attributes(pokemon_id: int) -> Dict[str, object]:
         "generation": (generation or "").lower(),
         "egg_groups": [eg.lower() for eg in egg_groups],
     }
+    _ATTR_MEMORY_CACHE[pokemon_id] = attrs
+    return attrs
 
 
 def _load_evolution_chain(chain_url: str) -> Optional[Dict[str, object]]:
@@ -233,6 +256,8 @@ def load_evolution_chain(chain_url: str) -> Optional[Dict[str, object]]:
 
 def load_pokemon_detail(pokemon_id: int) -> Tuple[Dict, Dict] | None:
     """Return (pokemon, species) JSON dicts for id, cached on disk."""
+    if pokemon_id in _POKEMON_MEMORY_CACHE:
+        return _POKEMON_MEMORY_CACHE[pokemon_id]
     cache_base = _cache_dir()
     p_path = cache_base / "pokemon" / f"{pokemon_id}.json"
     s_path = cache_base / "species" / f"{pokemon_id}.json"
@@ -240,6 +265,8 @@ def load_pokemon_detail(pokemon_id: int) -> Tuple[Dict, Dict] | None:
     pokemon = _read_json(p_path)
     species = _read_json(s_path)
     if pokemon and species:
+        _POKEMON_MEMORY_CACHE[pokemon_id] = (pokemon, species)
+        _SPECIES_MEMORY_CACHE[pokemon_id] = species
         return pokemon, species
 
     try:
@@ -247,12 +274,16 @@ def load_pokemon_detail(pokemon_id: int) -> Tuple[Dict, Dict] | None:
         species = _get(f"https://pokeapi.co/api/v2/pokemon-species/{pokemon_id}")
         _write_json(p_path, pokemon)
         _write_json(s_path, species)
+        _POKEMON_MEMORY_CACHE[pokemon_id] = (pokemon, species)
+        _SPECIES_MEMORY_CACHE[pokemon_id] = species
         return pokemon, species
     except Exception:
         return None
 
 
 def build_entry_from_api(pokemon_id: int, name: str) -> Dict[str, object] | None:
+    if pokemon_id in _ENTRY_MEMORY_CACHE:
+        return _ENTRY_MEMORY_CACHE[pokemon_id]
     data = load_pokemon_detail(pokemon_id)
     if not data:
         return None
@@ -314,7 +345,7 @@ def build_entry_from_api(pokemon_id: int, name: str) -> Dict[str, object] | None
     for s in sections:
         s["items"] = [i for i in s["items"] if i]
 
-    return {
+    entry = {
         "name": name.capitalize(),
         "category": "Pokémon",
         "index": pokemon_id,
@@ -324,3 +355,15 @@ def build_entry_from_api(pokemon_id: int, name: str) -> Dict[str, object] | None
         "metadata": metadata,
         "evolution_chain": evolution_chain,
     }
+    _ENTRY_MEMORY_CACHE[pokemon_id] = entry
+    return entry
+
+
+def build_entries_from_api_batch(items: Sequence[Tuple[int, str]]) -> List[Dict[str, object]]:
+    """Build multiple entries with cache reuse."""
+    results: List[Dict[str, object]] = []
+    for pokemon_id, name in items:
+        entry = build_entry_from_api(int(pokemon_id), name)
+        if entry:
+            results.append(entry)
+    return results
