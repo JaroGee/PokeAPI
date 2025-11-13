@@ -1784,19 +1784,29 @@ def main() -> None:
         (function() {{
           const shouldScroll = {should_scroll_js};
           if (!shouldScroll) return;
-          const scrollToResults = () => {{
+          const isMobile = window.innerWidth <= 900 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          if (!isMobile) return;
+          const scrollToAnchor = () => {{
             const anchor = document.getElementById('results-anchor');
-            if (!anchor) return;
-            const isMobile = window.matchMedia('(max-width: 768px)').matches || /Mobi|Android/i.test(navigator.userAgent);
-            if (!isMobile) return;
-            anchor.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+            if (!anchor) return false;
+            const top = anchor.getBoundingClientRect().top + window.pageYOffset - 12;
+            window.scrollTo({{ top, behavior: 'smooth' }});
+            return true;
+          }};
+          let attempts = 0;
+          const maxAttempts = 12;
+          const tryScroll = () => {{
+            attempts += 1;
+            const done = scrollToAnchor();
+            if (!done && attempts < maxAttempts) {{
+              setTimeout(tryScroll, 150);
+            }}
           }};
           if (document.readyState !== 'loading') {{
-            scrollToResults();
+            setTimeout(tryScroll, 80);
           }} else {{
-            document.addEventListener('DOMContentLoaded', scrollToResults);
+            document.addEventListener('DOMContentLoaded', () => setTimeout(tryScroll, 80));
           }}
-          window.setTimeout(scrollToResults, 400);
         }})();
         </script>
         """,
