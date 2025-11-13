@@ -681,12 +681,12 @@ def set_page_metadata() -> Dict[str, str]:
         caret-color: transparent !important;
         color-scheme: light !important;
       }}
-      /* BaseWeb popover outer shell (Safari shows hashed classes like .st-emotion-cache-90c5m5 */
-      [data-baseweb="layer"] > div[tabindex="-1"],
+      /* BaseWeb popover outer shell (Safari shows hashed classes like .st-emotion-cache-90c5m5) */
       .st-emotion-cache-1vjrt7f,
       .st-emotion-cache-1oahn2n,
       .st-emotion-cache-iiif1b,
       .st-emotion-cache-90c5m5,
+      [data-baseweb="layer"] > div[tabindex="-1"],
       [data-baseweb="popover"] {{
         background-color: transparent !important;
         color-scheme: light !important;
