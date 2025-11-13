@@ -38,17 +38,26 @@ except Exception:  # pragma: no cover
         serialize_entry = _m.serialize_entry
 
 try:
-    from .pokeapi_live import (
-        load_species_index,
-        build_entry_from_api,
-        build_entries_from_api_batch,
-    )
+    from . import pokeapi_live as _pokeapi_module  # type: ignore
 except Exception:  # pragma: no cover - run as script
-    from pokeapi_live import (
-        load_species_index,
-        build_entry_from_api,
-        build_entries_from_api_batch,
-    )
+    import pokeapi_live as _pokeapi_module  # type: ignore
+
+load_species_index = getattr(_pokeapi_module, "load_species_index")
+build_entry_from_api = getattr(_pokeapi_module, "build_entry_from_api")
+
+def _fallback_entry_batch(items):
+    result = []
+    for pid, name in items:
+        entry = build_entry_from_api(pid, name)
+        if entry:
+            result.append(entry)
+    return result
+
+build_entries_from_api_batch = getattr(
+    _pokeapi_module,
+    "build_entries_from_api_batch",
+    _fallback_entry_batch,
+)
 
 PAGE_SIZE = 8
 MAX_HISTORY = 64
