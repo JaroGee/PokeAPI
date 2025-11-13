@@ -38,17 +38,17 @@ st.set_page_config(
 )
 
 # Be flexible whether this file is run as a module or as a script.
-try:  # absolute import from package
-    from PokeAPI import (
+try:  # prefer relative import when running as package
+    from .PokeAPI import (
         CATEGORY_OPTIONS,
         DATASET,
         apply_filters,
         parse_query,
         serialize_entry,
     )
-except Exception:  # pragma: no cover
+except Exception:  # pragma: no cover - fall back to legacy paths
     try:
-        from PokeAPI.PokeAPI import (
+        from PokeAPI import (
             CATEGORY_OPTIONS,
             DATASET,
             apply_filters,
@@ -56,11 +56,21 @@ except Exception:  # pragma: no cover
             serialize_entry,
         )
     except Exception:
-        from importlib import import_module as _imp
-        _m = _imp("PokeAPI.PokeAPI")
-        CATEGORY_OPTIONS, DATASET = _m.CATEGORY_OPTIONS, _m.DATASET
-        apply_filters, parse_query = _m.apply_filters, _m.parse_query
-        serialize_entry = _m.serialize_entry
+        try:
+            from PokeAPI.PokeAPI import (  # type: ignore
+                CATEGORY_OPTIONS,
+                DATASET,
+                apply_filters,
+                parse_query,
+                serialize_entry,
+            )
+        except Exception:
+            from importlib import import_module as _imp
+
+            _m = _imp("PokeAPI.PokeAPI")
+            CATEGORY_OPTIONS, DATASET = _m.CATEGORY_OPTIONS, _m.DATASET
+            apply_filters, parse_query = _m.apply_filters, _m.parse_query
+            serialize_entry = _m.serialize_entry
 
 try:
     from . import pokeapi_live as _pokeapi_module  # type: ignore
