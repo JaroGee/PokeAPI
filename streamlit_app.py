@@ -685,8 +685,10 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] {{
         background-color: transparent !important;
         color-scheme: light !important;
+        border: none !important;
+        box-shadow: none !important;
+        outline: none !important;
       }}
-      [data-baseweb="popover"],
       [data-baseweb="popover"] > div {{
         background-color: #ffffff !important;
         border-radius: 12px !important;
@@ -709,8 +711,12 @@ def set_page_metadata() -> Dict[str, str]:
         mix-blend-mode: normal !important;
         color-scheme: light !important;
       }}
-      [data-baseweb="popover"] [role="listbox"] {{
-        background-color: #ffffff !important;
+      [data-baseweb="popover"] [role="listbox"],
+      [data-baseweb="menu"],
+      [role="listbox"] {{
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
         padding: 0.35rem 0.25rem !important;
       }}
       [data-baseweb="popover"] [role="option"],
