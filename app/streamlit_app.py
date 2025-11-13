@@ -15,12 +15,18 @@ import streamlit.components.v1 as components
 BASE_PATH = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_PATH.parent
 STATIC_DIR = PROJECT_ROOT / "static"
-DEFAULT_FAVICON = STATIC_DIR / "assets" / "PokeSearch_logo.png"
+ASSETS_DIR = STATIC_DIR / "assets"
+FAVICON_DIR = ASSETS_DIR / "pokesearch_favicons"
+LEGACY_LOGO_PATH = ASSETS_DIR / "PokeSearch_logo.png"
+DEFAULT_FAVICON = FAVICON_DIR / "pokeball_favicon-32x32.png"
 
 def _resolve_favicon_path() -> Path | None:
     candidates = [
-        BASE_PATH / "PokeSearch_logo.png",
+        FAVICON_DIR / "pokeball_android-chrome-512x512.png",
+        FAVICON_DIR / "pokeball_android-chrome-192x192.png",
         DEFAULT_FAVICON,
+        LEGACY_LOGO_PATH,
+        BASE_PATH / "PokeSearch_logo.png",
     ]
     for candidate in candidates:
         if candidate.exists():
@@ -430,24 +436,59 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    favicon_path = resolve_asset_path("PokeSearch_logo.png", base_path) or _FAVICON_PATH
-    favicon_b64 = load_file_as_base64(favicon_path) if favicon_path else None
+    icon_specs = [
+        ("icon", "image/png", "16x16", "pokesearch_favicons/pokeball_favicon-16x16.png"),
+        ("icon", "image/png", "32x32", "pokesearch_favicons/pokeball_favicon-32x32.png"),
+        ("icon", "image/png", "192x192", "pokesearch_favicons/pokeball_android-chrome-192x192.png"),
+        ("icon", "image/png", "512x512", "pokesearch_favicons/pokeball_android-chrome-512x512.png"),
+        ("shortcut icon", "image/x-icon", None, "pokesearch_favicons/pokeball_favicon.ico"),
+        ("apple-touch-icon", "image/png", "180x180", "pokesearch_favicons/pokeball_apple-touch-icon.png"),
+    ]
 
-    if favicon_b64:
-        st.markdown(
-            f"""
-            <link rel="icon" type="image/png" href="data:image/png;base64,{favicon_b64}">
-            <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,{favicon_b64}">
+    icon_markup: List[str] = []
+    apple_icon_present = False
+    for rel, mime, sizes, filename in icon_specs:
+        path = resolve_asset_path(filename, base_path)
+        if not path:
+            continue
+        icon_b64 = load_file_as_base64(path)
+        if not icon_b64:
+            continue
+        size_attr = f' sizes="{sizes}"' if sizes else ""
+        type_attr = f' type="{mime}"' if mime else ""
+        icon_markup.append(
+            f'<link rel="{rel}"{type_attr}{size_attr} href="data:{mime};base64,{icon_b64}">'
+        )
+        if rel == "apple-touch-icon":
+            apple_icon_present = True
+
+    if not icon_markup and _FAVICON_PATH:
+        fallback_b64 = load_file_as_base64(_FAVICON_PATH)
+        if fallback_b64:
+            icon_markup.append(
+                f'<link rel="icon" type="image/png" href="data:image/png;base64,{fallback_b64}">'
+            )
+            icon_markup.append(
+                f'<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,{fallback_b64}">'
+            )
+            apple_icon_present = True
+
+    if icon_markup:
+        apple_meta = ""
+        if apple_icon_present:
+            apple_meta = """
             <meta name="apple-mobile-web-app-capable" content="yes">
             <meta name="apple-mobile-web-app-title" content="PokéSearch">
-            """,
+            """
+        st.markdown(
+            "\n".join(icon_markup) + apple_meta,
             unsafe_allow_html=True,
         )
 
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)
     cursor_image, cursor_mime = (None, "image/png")
-    pokeapi_logo_path = base_path / "static" / "assets" / "pokeapi_256.png"
+    pokeapi_logo_path = ASSETS_DIR / "pokeapi_256.png"
     if not pokeapi_logo_path.exists():
         pokeapi_logo_path = resolve_asset_path("pokeapi_256.png", base_path)
     pokeapi_logo = load_file_as_base64(pokeapi_logo_path) if pokeapi_logo_path and pokeapi_logo_path.exists() else None
