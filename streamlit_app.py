@@ -686,6 +686,20 @@ def set_page_metadata() -> Dict[str, str]:
         background-color: transparent !important;
         color-scheme: light !important;
       }}
+      [data-baseweb="popover"] > div {{
+        background-color: #ffffff !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(0,0,0,0.08) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+        overflow: hidden !important;
+        outline: none !important;
+      }}
+      [data-baseweb="popover"]::before,
+      [data-baseweb="popover"]::after,
+      [data-baseweb="popover"] > div::before,
+      [data-baseweb="popover"] > div::after {{
+        display: none !important;
+      }}
       [data-baseweb="popover"] [role="listbox"],
       [data-baseweb="select"] *,
       [data-baseweb="select-option"] *,
@@ -697,9 +711,6 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-baseweb="popover"] [role="listbox"] {{
         background-color: #ffffff !important;
-        border-radius: 12px !important;
-        border: 1px solid rgba(0,0,0,0.08) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
         padding: 0.35rem 0.25rem !important;
       }}
       [data-baseweb="popover"] [role="option"],
@@ -1383,7 +1394,6 @@ def main() -> None:
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
                 st.session_state["enter_submit"] = True
-                st.session_state["scroll_to_results"] = True
                 st.rerun()
         st.markdown('<div class="pod-divider"></div>', unsafe_allow_html=True)
         with st.container():
@@ -1490,7 +1500,6 @@ def main() -> None:
                         chosen_entry = history_entries[idx]
                         restored_query = str(chosen_entry.get("query") or chosen_entry.get("label") or "")
                         st.session_state["search_prefill"] = restored_query
-                        st.session_state["scroll_to_results"] = True
                         st.rerun()
 
             generation_choice = st.selectbox(
@@ -1719,25 +1728,34 @@ def main() -> None:
         st.session_state["scroll_to_results"] = True
         st.rerun()
 
-    scroll_requested = st.session_state.pop("scroll_to_results", False)
+    scroll_requested = bool(st.session_state.get("scroll_to_results"))
+    should_scroll_js = "true" if scroll_requested else "false"
+    st.markdown(
+        f"""
+        <script>
+        (function() {{
+          const shouldScroll = {should_scroll_js};
+          if (!shouldScroll) return;
+          const scrollToResults = () => {{
+            const anchor = document.getElementById('results-anchor');
+            if (!anchor) return;
+            const isMobile = window.matchMedia('(max-width: 768px)').matches || /Mobi|Android/i.test(navigator.userAgent);
+            if (!isMobile) return;
+            anchor.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+          }};
+          if (document.readyState !== 'loading') {{
+            scrollToResults();
+          }} else {{
+            document.addEventListener('DOMContentLoaded', scrollToResults);
+          }}
+          window.setTimeout(scrollToResults, 400);
+        }})();
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
     if scroll_requested:
-        st.markdown(
-            """
-            <script>
-            (function() {
-              const anchor = document.getElementById('results-anchor');
-              if (!anchor) return;
-              const prefersMobile = window.matchMedia('(max-width: 820px)').matches || /Mobi|Android/i.test(navigator.userAgent);
-              if (!prefersMobile) return;
-              const offset = anchor.getBoundingClientRect().top + window.pageYOffset - 12;
-              window.requestAnimationFrame(() => {
-                window.scrollTo({ top: offset, behavior: 'smooth' });
-              });
-            })();
-            </script>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.session_state["scroll_to_results"] = False
 
 
 if __name__ == "__main__":
