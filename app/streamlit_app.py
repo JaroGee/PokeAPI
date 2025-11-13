@@ -322,6 +322,8 @@ def ensure_state() -> None:
         st.session_state["force_search_query"] = None
     if "clear_request" not in st.session_state:
         st.session_state["clear_request"] = False
+    if "scroll_to_results" not in st.session_state:
+        st.session_state["scroll_to_results"] = False
 
 
 def _mark_enter_submit() -> None:
@@ -418,6 +420,85 @@ def add_scroll_to_top_button() -> None:
         </script>
         """,
         height=0,
+    )
+
+
+def trigger_mobile_scroll(force: bool | None = None) -> None:
+    """Inject JS to scroll to the results anchor when requested."""
+    should_scroll = bool(
+        force if force is not None else st.session_state.get("scroll_to_results")
+    )
+    if not should_scroll:
+        return
+    st.session_state["scroll_to_results"] = False
+    should_scroll_js = "true" if should_scroll else "false"
+    st.markdown(
+        f"""
+        <script>
+        (function() {{
+          if (!{should_scroll_js}) return;
+          const OFFSET = 28;
+          const MAX_ATTEMPTS = 20;
+          let attempts = 0;
+
+          const scrollWithContainers = (anchor) => {{
+            const candidates = [
+              document.querySelector('[data-testid="stAppViewContainer"] .main'),
+              document.querySelector('[data-testid="stAppViewContainer"]'),
+              document.scrollingElement,
+              document.documentElement,
+              document.body
+            ];
+            const rect = anchor.getBoundingClientRect();
+            for (const target of candidates) {{
+              if (!target || typeof target.scrollTo !== "function") continue;
+              const targetRect = target.getBoundingClientRect ? target.getBoundingClientRect() : {{ top: 0 }};
+              const current = target.scrollTop !== undefined ? target.scrollTop : window.pageYOffset;
+              const top = current + rect.top - targetRect.top - OFFSET;
+              try {{
+                target.scrollTo({{ top, behavior: "smooth" }});
+                return true;
+              }} catch (err) {{
+                continue;
+              }}
+            }}
+            return false;
+          }};
+
+          const scrollToAnchor = () => {{
+            const anchor = document.getElementById("results-anchor");
+            if (!anchor) return false;
+            if (scrollWithContainers(anchor)) return true;
+            if (anchor.scrollIntoView) {{
+              anchor.scrollIntoView({{ behavior: "smooth", block: "start", inline: "nearest" }});
+              setTimeout(() => {{
+                window.scrollBy({{ top: -OFFSET, behavior: "smooth" }});
+              }}, 200);
+              return true;
+            }}
+            const top = anchor.getBoundingClientRect().top + window.pageYOffset - OFFSET;
+            window.scrollTo({{ top, behavior: "smooth" }});
+            return true;
+          }};
+
+          const tryScroll = () => {{
+            attempts += 1;
+            const done = scrollToAnchor();
+            if (!done && attempts < MAX_ATTEMPTS) {{
+              setTimeout(tryScroll, 150);
+            }}
+          }};
+
+          if (document.readyState === "complete") {{
+            setTimeout(tryScroll, 80);
+          }} else {{
+            document.addEventListener("DOMContentLoaded", () => setTimeout(tryScroll, 80), {{ once: true }});
+          }}
+          setTimeout(tryScroll, 80);
+        }})();
+        </script>
+        """,
+        unsafe_allow_html=True,
     )
 
 
@@ -1753,6 +1834,7 @@ def main() -> None:
             with gallery_placeholder.container():
                 render_sprite_gallery(matches)
             st.session_state["scroll_to_results"] = True
+            trigger_mobile_scroll(True)
             return
 
         limit = len(matches)
@@ -1829,44 +1911,7 @@ def main() -> None:
         st.session_state["scroll_to_results"] = True
         st.rerun()
 
-    scroll_requested = bool(st.session_state.get("scroll_to_results"))
-    should_scroll_js = "true" if scroll_requested else "false"
-    st.markdown(
-        f"""
-        <script>
-        (function() {{
-          const shouldScroll = {should_scroll_js};
-          if (!shouldScroll) return;
-          const isMobile = window.innerWidth <= 900 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-          if (!isMobile) return;
-          const scrollToAnchor = () => {{
-            const anchor = document.getElementById('results-anchor');
-            if (!anchor) return false;
-            const top = anchor.getBoundingClientRect().top + window.pageYOffset - 12;
-            window.scrollTo({{ top, behavior: 'smooth' }});
-            return true;
-          }};
-          let attempts = 0;
-          const maxAttempts = 12;
-          const tryScroll = () => {{
-            attempts += 1;
-            const done = scrollToAnchor();
-            if (!done && attempts < maxAttempts) {{
-              setTimeout(tryScroll, 150);
-            }}
-          }};
-          if (document.readyState !== 'loading') {{
-            setTimeout(tryScroll, 80);
-          }} else {{
-            document.addEventListener('DOMContentLoaded', () => setTimeout(tryScroll, 80));
-          }}
-        }})();
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
-    if scroll_requested:
-        st.session_state["scroll_to_results"] = False
+    trigger_mobile_scroll()
 
 
 if __name__ == "__main__":
