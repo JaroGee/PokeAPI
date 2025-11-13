@@ -12,6 +12,11 @@ from typing import Dict, List, Sequence, Tuple, Set
 import streamlit as st
 import streamlit.components.v1 as components
 
+try:  # Pillow ships with Streamlit; fall back gracefully if missing.
+    from PIL import Image  # type: ignore
+except Exception:  # pragma: no cover - Streamlit environments include Pillow.
+    Image = None  # type: ignore
+
 BASE_PATH = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_PATH.parent
 STATIC_DIR = PROJECT_ROOT / "static"
@@ -34,7 +39,25 @@ def _resolve_favicon_path() -> Path | None:
     return None
 
 _FAVICON_PATH = _resolve_favicon_path()
-PAGE_ICON = str(_FAVICON_PATH) if _FAVICON_PATH else "️🔎"
+
+
+def _load_page_icon_source() -> object | None:
+    """Load the icon once so Streamlit never falls back to the red crown."""
+    if not _FAVICON_PATH:
+        return None
+    if Image is not None:
+        try:
+            with _FAVICON_PATH.open("rb") as fh:
+                icon = Image.open(fh)
+                icon.load()
+            return icon
+        except Exception:
+            pass
+    return str(_FAVICON_PATH)
+
+
+_PAGE_ICON_SOURCE = _load_page_icon_source()
+PAGE_ICON = _PAGE_ICON_SOURCE if _PAGE_ICON_SOURCE else "️🔎"
 
 st.set_page_config(
     page_title="PokéSearch!",
@@ -423,83 +446,50 @@ def add_scroll_to_top_button() -> None:
     )
 
 
+_MOBILE_SCROLL_SNIPPET = """
+<script>
+(function() {
+  const isMobile = window.matchMedia('(max-width: 900px)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isMobile) return;
+  const OFFSET = 16;
+  const MAX_ATTEMPTS = 10;
+  let attempts = 0;
+
+  const scrollToResults = () => {
+    const anchor = document.getElementById('results-anchor');
+    if (!anchor) return false;
+    const top = anchor.getBoundingClientRect().top + window.pageYOffset - OFFSET;
+    window.scrollTo({ top, behavior: 'smooth' });
+    return true;
+  };
+
+  const tryScroll = () => {
+    if (scrollToResults()) return;
+    attempts += 1;
+    if (attempts < MAX_ATTEMPTS) {
+      setTimeout(tryScroll, 140);
+    }
+  };
+
+  if (document.readyState === 'complete') {
+    setTimeout(tryScroll, 80);
+  } else {
+    window.addEventListener('load', () => setTimeout(tryScroll, 80), { once: true });
+  }
+})();
+</script>
+"""
+
+
 def trigger_mobile_scroll(force: bool | None = None) -> None:
-    """Inject JS to scroll to the results anchor when requested."""
+    """Lightweight mobile autoscroll that doesn't interfere with Streamlit reruns."""
     should_scroll = bool(
         force if force is not None else st.session_state.get("scroll_to_results")
     )
     if not should_scroll:
         return
     st.session_state["scroll_to_results"] = False
-    should_scroll_js = "true" if should_scroll else "false"
-    st.markdown(
-        f"""
-        <script>
-        (function() {{
-          if (!{should_scroll_js}) return;
-          const OFFSET = 28;
-          const MAX_ATTEMPTS = 20;
-          let attempts = 0;
-
-          const scrollWithContainers = (anchor) => {{
-            const candidates = [
-              document.querySelector('[data-testid="stAppViewContainer"] .main'),
-              document.querySelector('[data-testid="stAppViewContainer"]'),
-              document.scrollingElement,
-              document.documentElement,
-              document.body
-            ];
-            const rect = anchor.getBoundingClientRect();
-            for (const target of candidates) {{
-              if (!target || typeof target.scrollTo !== "function") continue;
-              const targetRect = target.getBoundingClientRect ? target.getBoundingClientRect() : {{ top: 0 }};
-              const current = target.scrollTop !== undefined ? target.scrollTop : window.pageYOffset;
-              const top = current + rect.top - targetRect.top - OFFSET;
-              try {{
-                target.scrollTo({{ top, behavior: "smooth" }});
-                return true;
-              }} catch (err) {{
-                continue;
-              }}
-            }}
-            return false;
-          }};
-
-          const scrollToAnchor = () => {{
-            const anchor = document.getElementById("results-anchor");
-            if (!anchor) return false;
-            if (scrollWithContainers(anchor)) return true;
-            if (anchor.scrollIntoView) {{
-              anchor.scrollIntoView({{ behavior: "smooth", block: "start", inline: "nearest" }});
-              setTimeout(() => {{
-                window.scrollBy({{ top: -OFFSET, behavior: "smooth" }});
-              }}, 200);
-              return true;
-            }}
-            const top = anchor.getBoundingClientRect().top + window.pageYOffset - OFFSET;
-            window.scrollTo({{ top, behavior: "smooth" }});
-            return true;
-          }};
-
-          const tryScroll = () => {{
-            attempts += 1;
-            const done = scrollToAnchor();
-            if (!done && attempts < MAX_ATTEMPTS) {{
-              setTimeout(tryScroll, 150);
-            }}
-          }};
-
-          if (document.readyState === "complete") {{
-            setTimeout(tryScroll, 80);
-          }} else {{
-            document.addEventListener("DOMContentLoaded", () => setTimeout(tryScroll, 80), {{ once: true }});
-          }}
-          setTimeout(tryScroll, 80);
-        }})();
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown(_MOBILE_SCROLL_SNIPPET, unsafe_allow_html=True)
 
 
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
@@ -561,8 +551,30 @@ def set_page_metadata() -> Dict[str, str]:
             <meta name="apple-mobile-web-app-capable" content="yes">
             <meta name="apple-mobile-web-app-title" content="PokéSearch">
             """
+        cleanup_script = """
+        <script>
+        (function() {
+          const blocked = ["streamlit.io", "static.streamlit.io"];
+          const prune = () => {
+            const head = document.head || document.getElementsByTagName("head")[0];
+            if (!head) return;
+            head.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach((node) => {
+              const href = node.getAttribute("href") || "";
+              if (blocked.some((key) => href.includes(key))) {
+                if (node.parentNode) {
+                  node.parentNode.removeChild(node);
+                }
+              }
+            });
+          };
+          prune();
+          const observer = new MutationObserver(prune);
+          observer.observe(document.head || document.documentElement, { childList: true, subtree: true });
+        })();
+        </script>
+        """
         st.markdown(
-            "\n".join(icon_markup) + apple_meta,
+            "\n".join(icon_markup) + cleanup_script + apple_meta,
             unsafe_allow_html=True,
         )
 
@@ -780,9 +792,15 @@ def set_page_metadata() -> Dict[str, str]:
         min-height: 54px;
         font-size: 1rem;
       }}
+      /* Keep the main search input aligned with the buttons on desktop */
+      .search-panel [data-testid="stTextInput"],
+      .search-panel [data-testid="stTextInput"] > div:first-child {{
+        width: 100% !important;
+      }}
       [data-testid="stTextInput"] div[data-baseweb="input"],
       [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child,
       [data-testid="stTextInput"] div[data-baseweb="input"] input {{
+        width: 100% !important;
         background-color: #ffffff !important;
         color: #111111 !important;
         border-radius: 22px !important;
