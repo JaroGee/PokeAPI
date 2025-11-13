@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-# 2024-06-18 cleanup: single favicon config, new search layout, removed scroll scripts.
+# 2024-06-19 pass: force ⚡️ favicon + simple two-row search layout.
+import streamlit as st
+
+st.set_page_config(
+    page_title="PokeSearch",
+    page_icon="⚡️",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
 import base64
 import html
 import random
@@ -11,46 +20,10 @@ import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
 
-from PIL import Image
-import streamlit as st
-
 BASE_PATH = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_PATH.parent
 STATIC_DIR = PROJECT_ROOT / "static"
 ASSETS_DIR = STATIC_DIR / "assets"
-FAVICON_DIR = ASSETS_DIR / "pokesearch_favicons"
-LEGACY_LOGO_PATH = ASSETS_DIR / "PokeSearch_logo.png"
-DEFAULT_FAVICON = FAVICON_DIR / "pokeball_favicon-32x32.png"
-
-def _resolve_favicon_path() -> Path | None:
-    candidates = [
-        FAVICON_DIR / "pokeball_android-chrome-512x512.png",
-        FAVICON_DIR / "pokeball_android-chrome-192x192.png",
-        DEFAULT_FAVICON,
-        LEGACY_LOGO_PATH,
-        BASE_PATH / "PokeSearch_logo.png",
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    return None
-
-
-_FAVICON_PATH = _resolve_favicon_path()
-if _FAVICON_PATH:
-    try:
-        PAGE_ICON: object = Image.open(_FAVICON_PATH)
-    except Exception:
-        PAGE_ICON = str(_FAVICON_PATH)
-else:
-    PAGE_ICON = "️🔎"
-
-st.set_page_config(
-    page_title="PokeSearch",
-    page_icon=PAGE_ICON,
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # prefer relative import when running as package
@@ -1364,34 +1337,26 @@ def main() -> None:
                 st.session_state["force_search_query"] = None
                 st.session_state["clear_request"] = False
             st.markdown('<div class="section-label">Search</div>', unsafe_allow_html=True)
-            search_col, search_btn_col, random_btn_col, clear_btn_col = st.columns([4, 1, 1, 1])
-            with search_col:
-                search_value = st.text_input(
-                    "Search the Pokédex",
-                    placeholder="Search Pokémon or #",
-                    key="search_query_input",
-                    label_visibility="collapsed",
-                    autocomplete="off",
-                    on_change=_mark_enter_submit,
-                )
-            with search_btn_col:
-                search_clicked = st.button(
-                    "Search",
-                    use_container_width=True,
-                    key="search_submit",
-                )
-            with random_btn_col:
-                random_clicked = st.button(
-                    "Random",
-                    use_container_width=True,
-                    key="random_submit",
-                )
-            with clear_btn_col:
+            search_value = st.text_input(
+                "Search the Pokédex",
+                value=st.session_state.get("search_query", ""),
+                placeholder="Search Pokémon or #",
+                key="search_query_input",
+                label_visibility="collapsed",
+                autocomplete="off",
+                on_change=_mark_enter_submit,
+            )
+            btn_col1, btn_col2, btn_col3 = st.columns(3)
+            with btn_col1:
+                search_clicked = st.button("Search", use_container_width=True, key="search_submit")
+            with btn_col2:
+                random_clicked = st.button("Random", use_container_width=True, key="random_submit")
+            with btn_col3:
                 clear_clicked = st.button(
                     "Clear",
                     use_container_width=True,
                     key="clear_search",
-                    disabled=not bool(search_value),
+                    disabled=not bool(search_value.strip()),
                 )
             if clear_clicked:
                 st.session_state["search_prefill"] = ""
