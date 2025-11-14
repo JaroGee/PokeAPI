@@ -1,0 +1,28 @@
+.DS_Store
+Icon
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local Streamlit config
+.streamlit/
+
+# Editor settings
+.vscode/
+
+# Local virtual environments
+.venv/
+env/
+venv/
+bin/
+lib/
+Lib/
+Scripts/
+include/
+etc/
+share/
+pyvenv.cfg
+
+# App bundle generated for deployment
+app/
