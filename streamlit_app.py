@@ -9,8 +9,6 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
-from textwrap import dedent
-
 import streamlit as st
 
 try:
@@ -306,8 +304,18 @@ def _emoji_png_data_uri(emoji: str, px: int) -> str:
         except Exception:
             return ""
     glyph = emoji or "⚡️"
-    w, h = draw.textsize(glyph, font=font)
-    draw.text(((px - w) / 2, (px - h) / 2 - 2), glyph, font=font, fill=(255, 255, 255, 255))
+    try:
+        bbox = draw.textbbox((0, 0), glyph, font=font)
+        w = bbox[2] - bbox[0]
+        h = bbox[3] - bbox[1]
+    except Exception:
+        try:
+            w, h = draw.textsize(glyph, font=font)  # type: ignore[attr-defined]
+        except Exception:
+            w = h = int(px * 0.8)
+    draw_x = (px - w) / 2
+    draw_y = (px - h) / 2
+    draw.text((draw_x, draw_y), glyph, font=font, fill=(255, 255, 255, 255))
     buf = BytesIO()
     img.save(buf, format="PNG")
     encoded = base64.b64encode(buf.getvalue()).decode("ascii")
@@ -338,59 +346,6 @@ def inject_emoji_favicons(emoji: str = "⚡️") -> None:
     st.markdown("\n".join(tags), unsafe_allow_html=True)
 
 
-def inject_dropdown_css() -> None:
-    css = dedent(
-        """
-    /* Scope to Streamlit app container only */
-    [data-testid="stAppViewContainer"] {
-
-    }
-    /* BaseWeb popover portal. Make layer itself transparent. */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"]{
-      background: transparent !important;
-      box-shadow: none !important;
-      z-index: 10000 !important; /* on top of cards */
-    }
-    /* The actual options panel */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="listbox"]{
-      background: #FFFFFF !important;
-      color: #111111 !important;
-      border: 1px solid #E0E0E0 !important;
-      border-radius: 10px !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,.18) !important;
-      max-height: 60vh !important;
-      overflow: auto !important;
-    }
-    /* Clean option rows */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"]{
-      background: transparent !important;
-      color: #111111 !important;
-      border: 0 !important;
-      padding: 10px 14px !important;
-    }
-    /* Neutral hover and selected states */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"]:hover,
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"][aria-selected="true"]{
-      background: #F2F2F2 !important;
-    }
-    /* Closed select field. Keep text visible and on white */
-    [data-testid="stSelectbox"] [data-baseweb="select"] > div:first-child{
-      background: #FFFFFF !important;
-      color: #111111 !important;
-      border: 1px solid #E0E0E0 !important;
-      border-radius: 12px !important;
-    }
-    /* Never hide the input text or placeholder */
-    [data-testid="stSelectbox"] input{
-      opacity: 1 !important;
-      color: inherit !important;
-      caret-color: auto !important;
-    }
-    """
-    )
-    st.markdown(f"<style id='ps-dropdown-fix'>{css}</style>", unsafe_allow_html=True)
-
-
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
     for p in paths:
         try:
@@ -414,7 +369,6 @@ def set_page_metadata() -> Dict[str, str]:
         initial_sidebar_state="collapsed",
     )
     inject_emoji_favicons("⚡️")
-    inject_dropdown_css()
 
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)
