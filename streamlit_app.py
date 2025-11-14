@@ -3,13 +3,22 @@ from __future__ import annotations
 import base64
 import html
 import random
-import textwrap
 from datetime import datetime
+from io import BytesIO
 import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
+from textwrap import dedent
+
 import streamlit as st
+
+try:
+    from PIL import Image, ImageDraw, ImageFont
+except Exception:  # pragma: no cover - Pillow optional
+    Image = None  # type: ignore[assignment]
+    ImageDraw = None  # type: ignore[assignment]
+    ImageFont = None  # type: ignore[assignment]
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
@@ -279,6 +288,109 @@ def inject_clear_button_js() -> None:
     return
 
 
+def _emoji_png_data_uri(emoji: str, px: int) -> str:
+    if not Image or not ImageDraw or not ImageFont:
+        return ""
+    img = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    font = None
+    for name in ["Apple Color Emoji", "Noto Color Emoji", "Segoe UI Emoji", "Twemoji Mozilla", "DejaVu Sans"]:
+        try:
+            font = ImageFont.truetype(name, int(px * 0.82))
+            break
+        except Exception:
+            continue
+    if font is None:
+        try:
+            font = ImageFont.load_default()
+        except Exception:
+            return ""
+    glyph = emoji or "⚡️"
+    w, h = draw.textsize(glyph, font=font)
+    draw.text(((px - w) / 2, (px - h) / 2 - 2), glyph, font=font, fill=(255, 255, 255, 255))
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def _emoji_svg_data_uri(emoji: str) -> str:
+    glyph = emoji or "⚡️"
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <text y=".9em" font-size="110">{glyph}</text>
+</svg>'''
+    encoded = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def inject_emoji_favicons(emoji: str = "⚡️") -> None:
+    svg = _emoji_svg_data_uri(emoji)
+    png16 = _emoji_png_data_uri(emoji, 16)
+    png32 = _emoji_png_data_uri(emoji, 32)
+    png180 = _emoji_png_data_uri(emoji, 180)
+    tags = [f'<link rel="icon" type="image/svg+xml" href="{svg}">']
+    if png16:
+        tags.append(f'<link rel="icon" type="image/png" sizes="16x16" href="{png16}">')
+    if png32:
+        tags.append(f'<link rel="icon" type="image/png" sizes="32x32" href="{png32}">')
+    if png180:
+        tags.append(f'<link rel="apple-touch-icon" sizes="180x180" href="{png180}">')
+    st.markdown("\n".join(tags), unsafe_allow_html=True)
+
+
+def inject_dropdown_css() -> None:
+    css = dedent(
+        """
+    /* Scope to Streamlit app container only */
+    [data-testid="stAppViewContainer"] {
+
+    }
+    /* BaseWeb popover portal. Make layer itself transparent. */
+    [data-testid="stAppViewContainer"] div[data-baseweb="popover"]{
+      background: transparent !important;
+      box-shadow: none !important;
+      z-index: 10000 !important; /* on top of cards */
+    }
+    /* The actual options panel */
+    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="listbox"]{
+      background: #FFFFFF !important;
+      color: #111111 !important;
+      border: 1px solid #E0E0E0 !important;
+      border-radius: 10px !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,.18) !important;
+      max-height: 60vh !important;
+      overflow: auto !important;
+    }
+    /* Clean option rows */
+    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"]{
+      background: transparent !important;
+      color: #111111 !important;
+      border: 0 !important;
+      padding: 10px 14px !important;
+    }
+    /* Neutral hover and selected states */
+    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"]:hover,
+    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"][aria-selected="true"]{
+      background: #F2F2F2 !important;
+    }
+    /* Closed select field. Keep text visible and on white */
+    [data-testid="stSelectbox"] [data-baseweb="select"] > div:first-child{
+      background: #FFFFFF !important;
+      color: #111111 !important;
+      border: 1px solid #E0E0E0 !important;
+      border-radius: 12px !important;
+    }
+    /* Never hide the input text or placeholder */
+    [data-testid="stSelectbox"] input{
+      opacity: 1 !important;
+      color: inherit !important;
+      caret-color: auto !important;
+    }
+    """
+    )
+    st.markdown(f"<style id='ps-dropdown-fix'>{css}</style>", unsafe_allow_html=True)
+
+
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
     for p in paths:
         try:
@@ -294,14 +406,15 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    favicon_path = resolve_asset_path("PokeSearch_logo.png", base_path)
 
     st.set_page_config(
-        page_title="PokéSearch!",
-        page_icon=str(favicon_path) if favicon_path else "️🔎",
+        page_title="PokéSearch",
+        page_icon="⚡️",
         layout="wide",
         initial_sidebar_state="collapsed",
     )
+    inject_emoji_favicons("⚡️")
+    inject_dropdown_css()
 
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)
