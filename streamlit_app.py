@@ -655,11 +655,11 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-baseweb="popover"] [role="option"][aria-selected="true"],
       [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"] {{
-        background-color: rgba(255,222,0,0.45) !important;
+        background-color: #F2F2F2 !important;
       }}
       [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover,
       [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
-        background-color: rgba(59,76,202,0.12) !important;
+        background-color: #F7F7F7 !important;
       }}
       .search-panel .button-row {{
         display: flex;
