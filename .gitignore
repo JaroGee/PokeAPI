@@ -1,0 +1,31 @@
+.DS_Store
+Icon
+
+# Python cache
+__pycache__/
+app/__pycache__/
+*.py[cod]
+*.pyc
+
+# Pytest cache
+.pytest_cache/
+
+# Local Streamlit config
+.streamlit/
+.streamlit/secrets.toml
+
+# Editor settings
+.vscode/
+
+# Local virtual environments
+.venv/
+env/
+venv/
+bin/
+lib/
+Lib/
+Scripts/
+include/
+etc/
+share/
+pyvenv.cfg
