@@ -1230,6 +1230,7 @@ def main() -> None:
     filters_active = False
     filtered_species_index = list(species_index)
     shortcuts: Dict[str, str] = {}
+    shortcut_labels: List[str] = []
     scroll_triggered = False
     selected_generation = st.session_state.get("generation_filter", "all")
     selected_type = st.session_state.get("type_filter", "all")
@@ -1459,6 +1460,12 @@ def main() -> None:
         if capture_filter != "all":
             shortcuts["@capture"] = CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]
 
+        shortcut_labels = [
+            f"{token.lstrip('@').replace('_', ' ').title()}: {value}"
+            for token, value in shortcuts.items()
+            if value
+        ]
+
 
 
     if pending_lookup_trigger or history_trigger or evo_jump:
@@ -1522,7 +1529,15 @@ def main() -> None:
                 ]
                 meta_parts = [text for _label, active, text in filter_labels if active and text]
                 meta_text = " · ".join(meta_parts)
-                add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
+                add_to_history(
+                    make_history_entry(
+                        label,
+                        query_trimmed,
+                        serialized,
+                        meta_text,
+                        shortcut_labels,
+                    )
+                )
                 gallery_placeholder.empty()
                 anchor_placeholder.markdown(
                     '<div id="results-anchor"></div>',
@@ -1581,7 +1596,7 @@ def main() -> None:
                 entry.get("name", name_guess),
                 [entry],
                 meta_text,
-                [],
+                shortcut_labels,
             )
         )
         anchor_placeholder.markdown(
