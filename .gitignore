@@ -3,10 +3,16 @@ Icon
 
 # Python cache
 __pycache__/
+app/__pycache__/
 *.py[cod]
+*.pyc
+
+# Pytest cache
+.pytest_cache/
 
 # Local Streamlit config
 .streamlit/
+.streamlit/secrets.toml
 
 # Editor settings
 .vscode/
@@ -23,6 +29,3 @@ include/
 etc/
 share/
 pyvenv.cfg
-
-# App bundle generated for deployment
-app/
