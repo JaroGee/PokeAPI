@@ -346,6 +346,10 @@ CSS_OVERRIDES = _build_css(CSS_TEMPLATE)
 JS_SNIPPET = """
 <script>
   (() => {
+    const isMobile =
+      /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      window.matchMedia('(pointer:coarse)').matches ||
+      window.matchMedia('(max-width: 820px)').matches;
     const ensureTopButton = () => {
       if (document.getElementById('to-top')) {
         return document.getElementById('to-top');
@@ -377,11 +381,16 @@ JS_SNIPPET = """
 
     ensureTopButton();
 
-    const flag = document.querySelector('#scroll-flag');
-    const anchor = document.querySelector('#results-anchor');
-    if (flag && anchor) {
-      anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    const tryScroll = () => {
+      if (!isMobile) return;
+      const flag = document.querySelector('#scroll-flag');
+      const anchor = document.querySelector('#results-anchor');
+      if (flag && anchor) {
+        anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+
+    tryScroll();
   })();
 </script>
 """
