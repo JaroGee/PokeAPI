@@ -2,304 +2,6 @@ from __future__ import annotations
 
 import streamlit as st
 
-# --- CSS_OVERRIDES BEGIN ---
-CSS_TEMPLATE = """
-  :root {
-    --poke-red: #E3350D;
-    --poke-yellow: #FFCC00;
-    --poke-blue: #356ABC;
-    --poke-white: #FFFFFF;
-    --ink: #111111;
-    --field: #F1F2F4;
-    --card: rgba(255,255,255,0.9);
-  }
-  [data-testid="stAppViewContainer"] {
-    background: url("pokesearch/static/assets/pokesearch_bg.jpeg") center/cover fixed no-repeat !important;
-  }
-  html, body {
-    color-scheme: light !important;
-    color: var(--ink) !important;
-    background: transparent !important;
-    font-family: "Inter", "Helvetica Neue", sans-serif;
-  }
-  section.main, .block-container, [data-testid="block-container"] {
-    background: transparent !important;
-  }
-  .search-card {
-    background: var(--card);
-    border-radius: 22px;
-    padding: 1.25rem 1.5rem;
-    box-shadow: 0 16px 32px rgba(0,0,0,0.08);
-    max-width: 680px;
-    margin: 0 auto 1.5rem;
-    border: 1px solid rgba(0,0,0,0.08);
-  }
-  .logo-wrapper img {
-    max-width: 240px;
-    width: 100%;
-    display: block;
-    margin: 0 auto 1.5rem;
-  }
-  .pod-label {
-    display: inline-flex;
-    flex-direction: column;
-    gap: 4px;
-    background: rgba(255,255,255,0.92);
-    border-radius: 14px;
-    padding: 0.55rem 0.8rem;
-    box-shadow: 0 12px 26px rgba(0,0,0,0.12);
-    margin-bottom: 0.75rem;
-    text-align: center;
-  }
-  .pod-label span {
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(0,0,0,0.55);
-  }
-  .pod-label strong {
-    font-size: 1.25rem;
-    color: var(--poke-blue);
-  }
-  .pod-divider {
-    height: 1px;
-    background: rgba(255,255,255,0.6);
-    margin: 1.25rem 0;
-  }
-  .btn-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-top: 0.75rem;
-  }
-  .stTextInput > div > div,
-  [data-baseweb="input"] > div {
-    background: var(--field) !important;
-    color: var(--ink) !important;
-    border: 1px solid rgba(0,0,0,0.12) !important;
-    border-radius: 12px !important;
-  }
-  [data-testid="stTextInput"] input,
-  [data-testid="stSearchInput"] input,
-  input[type="text"], input[type="search"] {
-    background: transparent !important;
-    color: var(--ink) !important;
-  }
-  [data-baseweb="select"] > div {
-    background: var(--field) !important;
-    color: var(--ink) !important;
-    border: 1px solid rgba(0,0,0,0.12) !important;
-    border-radius: 12px !important;
-  }
-  [data-baseweb="select"] svg {
-    color: var(--ink) !important;
-    fill: var(--ink) !important;
-    opacity: 1 !important;
-  }
-  [data-baseweb="popover"], [data-baseweb="menu"] {
-    background: #fff !important;
-    color: var(--ink) !important;
-    border: 1px solid rgba(0,0,0,0.12) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12) !important;
-    z-index: 9999 !important;
-  }
-  [data-baseweb="menu"] div[role="option"]:hover {
-    background: #FFF8CC !important;
-  }
-  [data-baseweb="menu"] div[role="option"][aria-selected="true"] {
-    background: #FFF3B3 !important;
-  }
-  .stButton > button {
-    height: 44px !important;
-    padding: 0 16px !important;
-    border-radius: 12px !important;
-    border: 1px solid rgba(0,0,0,0.15) !important;
-    background: var(--poke-yellow) !important;
-    color: #222 !important;
-    font-weight: 600 !important;
-    line-height: 1.1 !important;
-    margin: 0 !important;
-  }
-  .stButton > button:hover {
-    filter: brightness(0.95);
-  }
-  .stButton > button:disabled {
-    background: rgba(0,0,0,0.04) !important;
-    color: rgba(0,0,0,0.45) !important;
-  }
-  .shortcut-row {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.6rem;
-  }
-  .shortcut-pill {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,0.22);
-    background: rgba(255,255,255,0.92);
-    font-size: 0.8rem;
-  }
-  .poke-card {
-    background: var(--card);
-    border-radius: 22px;
-    border: 1px solid rgba(0,0,0,0.08);
-    padding: 1.5rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 18px 30px rgba(0,0,0,0.08);
-  }
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-  }
-  .card-header .name {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--poke-blue);
-  }
-  .card-header .meta {
-    color: rgba(0,0,0,0.55);
-    font-size: 0.9rem;
-  }
-  .dex-card {
-    background: var(--card) !important;
-    border: 1px solid rgba(0,0,0,0.12) !important;
-    border-radius: 16px !important;
-    padding: 16px 18px !important;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.08) !important;
-    margin-top: 1rem !important;
-  }
-  .dex-card h3, .dex-card h4 {
-    margin: 8px 0 6px !important;
-  }
-  .dex-card ul {
-    margin: 6px 0 10px 20px !important;
-    list-style: disc !important;
-  }
-  .dex-card li {
-    margin: 2px 0 !important;
-  }
-  .stat-art img {
-    max-width: 140px !important;
-    width: 100% !important;
-    height: auto !important;
-  }
-  .hero-art img {
-    max-width: 320px !important;
-    width: 100% !important;
-    height: auto !important;
-  }
-  @media (max-width: 640px) {
-    .hero-art img {
-      max-width: 220px !important;
-    }
-  }
-  .pixel-icon {
-    border-radius: 20px;
-    background: rgba(255,255,255,0.95);
-    border: 1px solid rgba(0,0,0,0.05);
-    padding: 0.5rem;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-  }
-  .meta-pill-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-  }
-  .meta-pill {
-    display: flex;
-    gap: 4px;
-    align-items: baseline;
-    background: rgba(255,255,255,0.85);
-    border-radius: 999px;
-    padding: 0.35rem 0.75rem;
-    border: 1px solid rgba(0,0,0,0.08);
-    font-size: 0.85rem;
-  }
-  .meta-pill span {
-    color: rgba(0,0,0,0.55);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-size: 0.7rem;
-  }
-  .history-meta-badge {
-    font-size: 0.85rem;
-    color: rgba(0,0,0,0.65);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.4rem;
-  }
-  .sprite-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.55rem 0.4rem 0.9rem;
-    border-radius: 0.85rem;
-    background: rgba(255,255,255,0.9);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.14);
-    text-decoration: none !important;
-  }
-  .gallery-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    margin: 0.5rem 0;
-    color: var(--poke-blue);
-  }
-  .evo-pill {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.95);
-    border-radius: 18px;
-    padding: 10px 12px;
-    border: 1px solid rgba(0,0,0,0.08);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.1);
-  }
-  .evo-pill button {
-    width: 100%;
-  }
-  .evo-pill img {
-    width: 56px !important;
-    height: 56px !important;
-    object-fit: contain !important;
-  }
-  img[src*="pokeapi_256"] {
-    width: 160px !important;
-    height: auto !important;
-    display: block;
-    margin: 8px auto !important;
-  }
-  .footer-bar {
-    background: rgba(255,255,255,0.85);
-    padding: 1rem 1.25rem;
-    border-radius: 18px;
-    text-align: center;
-    font-size: 0.85rem;
-    line-height: 1.4;
-    margin-top: 2rem;
-    border: 1px solid rgba(0,0,0,0.05);
-  }
-  .footer-powered {
-    display: block;
-    margin-top: 0.6rem;
-  }
-  .accent {
-    color: var(--poke-blue);
-  }
-  .rule {
-    border-bottom: 2px solid var(--poke-blue);
-    width: 100%;
-    margin: 8px 0 14px;
-  }
-"""
-# --- CSS_OVERRIDES END ---
 
 import base64
 import html
@@ -315,24 +17,6 @@ import requests
 SEARCH_KEY = "query"
 
 
-def _load_bg_image_b64() -> str:
-    bg_path = Path(__file__).parent / "static" / "assets" / "pokesearch_bg.jpeg"
-    try:
-        return base64.b64encode(bg_path.read_bytes()).decode("utf-8")
-    except FileNotFoundError:
-        return ""
-
-
-def _build_css(template: str) -> str:
-    bg_b64 = _load_bg_image_b64()
-    if bg_b64:
-        return template.replace(
-            "pokesearch/static/assets/pokesearch_bg.jpeg",
-            f"data:image/jpeg;base64,{bg_b64}",
-        )
-    return template
-
-
 def _request_rerun() -> None:
     try:  # Streamlit >=1.29
         st.rerun()
@@ -340,7 +24,19 @@ def _request_rerun() -> None:
         st.experimental_rerun()
 
 
-CSS_OVERRIDES = _build_css(CSS_TEMPLATE)
+def _jump_to(name: str, pid: int | None = None) -> None:
+    target = (name or "").strip()
+    if not target:
+        return
+    st.session_state[SEARCH_KEY] = target
+    st.session_state["force_search_query"] = target
+    st.session_state["search_prefill"] = target
+    st.session_state["pending_lookup_id"] = pid if pid is not None else None
+    st.session_state["search_feedback"] = ""
+    st.session_state["last_search_key"] = None
+    st.session_state["jump_from_evo"] = True
+    st.session_state["trigger_search"] = True
+    _request_rerun()
 
 # --- JS_HELPERS BEGIN ---
 JS_SNIPPET = """
@@ -397,11 +93,388 @@ JS_SNIPPET = """
 # --- JS_HELPERS END ---
 
 st.set_page_config(
-    page_title="PokeSearch",
-    page_icon="pokesearch/static/assets/pokesearch_favicons/pokeball_favicon.ico",
+    page_title="PokéSearch",
+    page_icon="pokesearch/static/assets/pokesearch_favicons/pokeball_favicon-32x32.png",
     layout="wide",
 )
-st.markdown(f"<style>{CSS_OVERRIDES}</style>", unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+      :root {
+        --poke-red: #E3350D;
+        --poke-yellow: #FFCC00;
+        --poke-blue: #356ABC;
+        --poke-white: #FFFFFF;
+        --ink: #111111;
+        --field: #F1F2F4;
+        --card: rgba(255, 255, 255, 0.92);
+      }
+      [data-testid="stAppViewContainer"] {
+        background-image: url("pokesearch/static/assets/pokesearch_bg.jpeg");
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+      }
+      @supports (-webkit-touch-callout:none) {
+        [data-testid="stAppViewContainer"] {
+          background-attachment: scroll;
+        }
+      }
+      html, body {
+        color: var(--ink);
+        font-family: "Inter", "Helvetica Neue", sans-serif;
+        background: transparent;
+      }
+      [data-testid="block-container"] {
+        background: transparent;
+      }
+      .site-logo img {
+        width: clamp(260px, 30vw, 520px);
+        height: auto;
+        display: block;
+        margin: 0 auto 8px;
+      }
+      .content-wrap {
+        max-width: 1200px;
+        margin-inline: auto;
+        padding-inline: 16px;
+      }
+      .search-card {
+        background: var(--card);
+        border-radius: 22px;
+        padding: 24px 28px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
+        margin-bottom: 20px;
+      }
+      .pod-label {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.92);
+        border-radius: 14px;
+        padding: 8px 14px;
+        box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+        margin-bottom: 12px;
+        text-align: center;
+      }
+      .pod-label span {
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(0, 0, 0, 0.55);
+      }
+      .pod-label strong {
+        font-size: 1.3rem;
+        color: var(--poke-blue);
+      }
+      .pod-divider {
+        height: 1px;
+        background: rgba(255, 255, 255, 0.6);
+        margin: 20px 0;
+      }
+      .hero-art {
+        text-align: center;
+      }
+      .hero-art img {
+        width: clamp(180px, 26vw, 320px);
+        height: auto;
+        display: block;
+        margin-inline: auto;
+      }
+      .action-row {
+        display: flex;
+        gap: 12px;
+        margin: 8px 0 16px;
+        align-items: stretch;
+        flex-wrap: nowrap;
+      }
+      .action-row > div {
+        flex: 0 0 auto;
+      }
+      .action-row [data-testid="stButton"] {
+        width: 100%;
+      }
+      .action-row [data-testid="stButton"] > button {
+        width: 100%;
+        height: 44px;
+        padding: 0 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.15);
+        background: var(--poke-yellow);
+        color: #222;
+        font-weight: 600;
+        line-height: 1.1;
+      }
+      .action-row [data-testid="stButton"] > button:disabled {
+        background: rgba(0, 0, 0, 0.05);
+        color: rgba(0, 0, 0, 0.45);
+      }
+      [data-testid="stTextInput"] > div > div {
+        background: var(--field);
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 12px;
+      }
+      [data-testid="stTextInput"] input {
+        background: transparent;
+        color: var(--ink);
+      }
+      [data-baseweb="select"] > div {
+        background: var(--field);
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 12px;
+        color: #111;
+      }
+      [data-baseweb="select"] svg {
+        opacity: 1;
+        fill: #111;
+      }
+      select {
+        background-color: var(--field);
+        color: #111;
+      }
+      .shortcut-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .shortcut-pill {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        background: rgba(255, 255, 255, 0.92);
+        font-size: 0.8rem;
+      }
+      .poke-card {
+        background: var(--card);
+        border-radius: 22px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 18px 30px rgba(0, 0, 0, 0.1);
+        padding: 24px 28px;
+        margin-bottom: 24px;
+      }
+      .card-header {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .stat-art {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .stat-art img {
+        width: clamp(140px, 22vw, 260px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
+      }
+      .card-title h3 {
+        margin: 0;
+        font-size: 1.6rem;
+        color: var(--poke-blue);
+      }
+      .card-meta {
+        color: rgba(0, 0, 0, 0.6);
+        font-size: 0.95rem;
+        margin-top: 4px;
+      }
+      .flavor-text {
+        margin: 16px 0 0;
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+      .dex-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 18px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        padding: 18px 22px;
+        margin-top: 18px;
+      }
+      .section-block {
+        margin-bottom: 18px;
+      }
+      .section-block:last-of-type {
+        margin-bottom: 0;
+      }
+      .section-block h4 {
+        margin: 0 0 8px;
+        font-size: 1.05rem;
+        color: #1f2a44;
+      }
+      .section-block ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: disc;
+      }
+      .section-block li {
+        margin: 4px 0;
+      }
+      .meta-block ul {
+        list-style: none;
+        padding-left: 0;
+      }
+      .meta-block li {
+        margin: 4px 0;
+      }
+      .meta-block strong {
+        color: #1f2a44;
+      }
+      .history-meta-badge {
+        font-size: 0.85rem;
+        color: rgba(0, 0, 0, 0.65);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+        display: inline-block;
+      }
+      .gallery-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+        color: var(--poke-blue);
+      }
+      .sprite-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.6rem 0.5rem 0.9rem;
+        border-radius: 0.85rem;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+        text-decoration: none !important;
+        color: inherit;
+      }
+      .footer-bar {
+        background: rgba(255, 255, 255, 0.85);
+        padding: 1rem 1.25rem;
+        border-radius: 18px;
+        text-align: center;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        margin-top: 2rem;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+      }
+      .footer-powered {
+        margin-top: 0.75rem;
+        font-weight: 600;
+        color: #1c2735;
+      }
+      .powered-logo {
+        width: 160px;
+        height: auto;
+        display: block;
+        margin: 12px auto 0;
+        opacity: 0.95;
+      }
+      .evo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-top: 8px;
+      }
+      .evo-pill {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        min-width: 160px;
+      }
+      .evo-pill img {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.6);
+      }
+      .evo-placeholder {
+        width: 64px;
+        height: 64px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: #384457;
+      }
+      .evo-name {
+        font-weight: 600;
+        color: #1c2735;
+      }
+      .evo-pill [data-testid="stButton"] {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+      }
+      .evo-pill [data-testid="stButton"] > button {
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        border: none;
+        background: transparent;
+      }
+      .evo-pill [data-testid="stButton"] > button:focus-visible {
+        outline: 2px solid var(--poke-blue);
+      }
+      .evo-arrow {
+        font-size: 18px;
+        opacity: 0.7;
+      }
+      .history-select-wrapper {
+        margin-bottom: 12px;
+      }
+      @media (max-width: 640px) {
+        .content-wrap {
+          padding-inline: 12px;
+        }
+        .action-row {
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .action-row > div {
+          flex: 1 1 calc(33.333% - 8px);
+        }
+        .card-header {
+          justify-content: center;
+          text-align: center;
+        }
+        .card-title {
+          text-align: center;
+        }
+        .flavor-text {
+          text-align: center;
+        }
+        .hero-art img {
+          width: clamp(160px, 60vw, 240px);
+        }
+        .stat-art img {
+          width: clamp(130px, 48vw, 220px);
+        }
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown(
+    """
+    <link rel="icon" type="image/png" sizes="32x32" href="pokesearch/static/assets/pokesearch_favicons/pokeball_favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="pokesearch/static/assets/pokesearch_favicons/pokeball_favicon-16x16.png">
+    <link rel="apple-touch-icon" href="pokesearch/static/assets/pokesearch_favicons/pokeball_apple-touch-icon.png">
+    <link rel="icon" href="pokesearch/static/assets/pokesearch_favicons/pokeball_favicon.ico">
+    """,
+    unsafe_allow_html=True,
+)
 st.markdown(JS_SNIPPET, unsafe_allow_html=True)
 
 # Be flexible whether this file is run as a module or as a script.
@@ -472,20 +545,30 @@ def get_species(id_or_name: int | str) -> Dict[str, object]:
 
 @st.cache_data(ttl=24 * 60 * 60, show_spinner=False)
 def get_art_url(name_or_id: int | str) -> str | None:
-    data = get_pokemon(name_or_id)
+    art_url, _ = get_pokemon_art_and_id(name_or_id)
+    return art_url
+
+
+@st.cache_data(ttl=TTL_STATIC, show_spinner=False)
+def get_pokemon_art_and_id(id_or_name: int | str) -> Tuple[str | None, int | None]:
+    data = get_pokemon(id_or_name)
     if not data:
-        return None
-    try:
-        artwork = (
-            data["sprites"]["other"]["official-artwork"]["front_default"]
-            or data["sprites"]["front_default"]
-        )
-        if artwork:
-            return str(artwork)
-    except Exception:
-        pass
+        return (None, None)
     sprites = data.get("sprites") or {}
-    return str(sprites.get("front_default") or "") or None
+    other = sprites.get("other") or {}
+    art = (
+        (other.get("official-artwork") or {}).get("front_default")
+        or (other.get("dream_world") or {}).get("front_default")
+        or (other.get("home") or {}).get("front_default")
+        or sprites.get("front_default")
+    )
+    pid = data.get("id")
+    art_url = str(art) if art else None
+    try:
+        pid_val = int(pid) if pid is not None else None
+    except (TypeError, ValueError):
+        pid_val = None
+    return (art_url, pid_val)
 
 
 @st.cache_data(ttl=TTL_STATIC, show_spinner=False)
@@ -891,13 +974,12 @@ def add_to_history(entry: Dict[str, object]) -> None:
 
 
 def render_section(section: Dict[str, object]) -> str:
-    items_html = "".join(f"<li>{html.escape(item)}</li>" for item in section["items"])
-    return (
-        '<div class="section-block">'
-        f'<div class="section-title">{html.escape(section["title"])}</div>'
-        f"<ul>{items_html}</ul>"
-        "</div>"
-    )
+    items = [item for item in section.get("items", []) if item]
+    if not items:
+        return ""
+    items_html = "".join(f"<li>{html.escape(item)}</li>" for item in items)
+    title = html.escape(str(section.get("title", "")))
+    return f'<div class="section-block"><h4>{title}</h4><ul>{items_html}</ul></div>'
 
 
 def _slugify_pokemon_name(name: str) -> str:
@@ -1031,11 +1113,11 @@ def _render_metadata(metadata: Dict[str, object] | None) -> str:
         details.append(("Capture Rate", str(capture)))
     if not details:
         return ""
-    pills = "".join(
-        f'<div class="meta-pill"><span>{html.escape(label)}</span><strong>{html.escape(value)}</strong></div>'
+    items = "".join(
+        f'<li><strong>{html.escape(label)}:</strong> {html.escape(value)}</li>'
         for label, value in details
     )
-    return f'<div class="meta-pill-grid">{pills}</div>'
+    return f'<div class="section-block meta-block"><h4>Details</h4><ul>{items}</ul></div>'
 
 
 def _flatten_chain(node: Dict[str, object] | None) -> List[List[str]]:
@@ -1057,7 +1139,7 @@ def _flatten_chain(node: Dict[str, object] | None) -> List[List[str]]:
 
 
 # --- EVOLUTION_CHAIN BEGIN ---
-def render_evolution_chain_ui(chain_url: str, key_prefix: str, search_key: str) -> None:
+def render_evolution_chain_ui(chain_url: str, key_prefix: str) -> None:
     if not chain_url:
         return
     data = get_evolution_chain(chain_url)
@@ -1068,36 +1150,38 @@ def render_evolution_chain_ui(chain_url: str, key_prefix: str, search_key: str) 
         return
     st.markdown("#### Evolution chain")
     for branch_index, branch in enumerate(branches):
-        cols = st.columns(len(branch) * 2 - 1)
-        col_ptr = 0
-        for step_index, species in enumerate(branch):
-            name = species if isinstance(species, str) else str((species or {}).get("name", ""))
-            name = name.strip()
-            art = get_art_url(name) if name else None
-            display = name.capitalize() if name else "Unknown"
-            with cols[col_ptr]:
-                st.markdown('<div class="evo-pill" style="text-align:center;">', unsafe_allow_html=True)
-                if st.button(
-                    display,
-                    key=f"evo-{key_prefix}-{branch_index}-{step_index}-{name}",
-                    help="View this Pokémon",
-                ):
-                    st.session_state[search_key] = name
-                    st.session_state["force_search_query"] = name
-                    st.session_state["pending_lookup_id"] = None
-                    st.session_state["search_feedback"] = ""
-                    st.session_state["last_search_key"] = None
-                    st.session_state["jump_from_evo"] = True
-                    st.session_state["should_scroll"] = True
-                    _request_rerun()
-                if art:
-                    st.image(art, use_column_width=False)
+        row_container = st.container()
+        with row_container:
+            st.markdown('<div class="evo-row">', unsafe_allow_html=True)
+            for step_index, species in enumerate(branch):
+                raw_name = species if isinstance(species, str) else str((species or {}).get("name", ""))
+                raw_name = raw_name.strip()
+                art_url, pid = get_pokemon_art_and_id(raw_name) if raw_name else (None, None)
+                display_name = raw_name.capitalize() if raw_name else "Unknown"
+                slug = _slugify_pokemon_name(raw_name or f"unknown-{step_index}") or f"{step_index}"
+                st.markdown('<div class="evo-pill">', unsafe_allow_html=True)
+                st.button(
+                    display_name,
+                    key=f"evo-{key_prefix}-{branch_index}-{step_index}-{slug}",
+                    help=f"View {display_name}",
+                    on_click=_jump_to,
+                    args=(raw_name, pid),
+                )
+                if art_url:
+                    st.markdown(
+                        f'<img src="{html.escape(art_url, quote=True)}" alt="{html.escape(display_name)}" />',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    st.markdown('<div class="evo-placeholder">?</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<span class="evo-name">{html.escape(display_name)}</span>',
+                    unsafe_allow_html=True,
+                )
                 st.markdown("</div>", unsafe_allow_html=True)
-            col_ptr += 1
-            if step_index < len(branch) - 1:
-                with cols[col_ptr]:
-                    st.markdown('<div style="text-align:center;font-size:20px;">→</div>', unsafe_allow_html=True)
-                col_ptr += 1
+                if step_index < len(branch) - 1:
+                    st.markdown('<div class="evo-arrow">→</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 # --- EVOLUTION_CHAIN END ---
 
 
@@ -1128,38 +1212,48 @@ def render_entry_html(entry: Dict[str, object], fallback_icon_b64: str) -> str:
     sections_html = "".join(render_section(section) for section in entry["sections"])
     category = str(entry.get("category", ""))
     name = str(entry.get("name", ""))
+    description = str(entry.get("description") or "").strip()
 
     is_pokemon = category.lower() in {"pokémon", "pokemon"}
-    pid = int(entry.get("index") or 0)
+    try:
+        pid_int = int(entry.get("index") or 0)
+    except (TypeError, ValueError):
+        pid_int = 0
     sprite_override = entry.get("sprite")
     if sprite_override:
         display_src_raw = str(sprite_override)
     elif is_pokemon:
-        display_src_raw = _pokemon_icon_url(name, pid if pid else None)
+        display_src_raw = _pokemon_icon_url(name, pid_int if pid_int else None)
     else:
         display_src_raw = f"data:image/svg+xml;base64,{fallback_icon_b64}"
     icon_src = html.escape(display_src_raw, quote=True)
-    alt_text = f"{name} icon" if is_pokemon else "Pixel icon"
+    alt_text = f"{name} artwork" if is_pokemon else "Pixel icon"
 
     metadata_html = _render_metadata(entry.get("metadata"))
-    image_block = (
-        f'    <div class="stat-art"><img class="pixel-icon" src="{icon_src}" alt="{html.escape(alt_text)}" /></div>'
-    )
+    details_html = f"{sections_html}{metadata_html}" if (sections_html or metadata_html) else ""
+
+    meta_parts: List[str] = []
+    if pid_int:
+        meta_parts.append(f"#{pid_int:03d}")
+    if category:
+        meta_parts.append(category)
+    meta_text = " · ".join(meta_parts)
 
     parts = [
         '<div class="poke-card">',
         '  <div class="card-header">',
-        image_block,
-        "    <div>",
-        f'      <div class="name">{html.escape(name)}</div>',
-        f'      <div class="meta">{html.escape(category)} · #{entry["index"]}</div>',
-        "    </div>",
-        "  </div>",
-        f"  <p>{html.escape(entry['description'])}</p>",
-        f'  <div class="dex-card">{sections_html}</div>',
+        f'    <div class="stat-art"><img src="{icon_src}" alt="{html.escape(alt_text)}" /></div>',
+        '    <div class="card-title">',
+        f'      <h3 class="card-name">{html.escape(name)}</h3>',
     ]
-    if metadata_html:
-        parts.append(metadata_html)
+    if meta_text:
+        parts.append(f'      <div class="card-meta">{html.escape(meta_text)}</div>')
+    parts.append("    </div>")
+    parts.append("  </div>")
+    if description:
+        parts.append(f'  <p class="flavor-text">{html.escape(description)}</p>')
+    if details_html:
+        parts.append(f'  <div class="dex-card">{details_html}</div>')
     parts.append("</div>")
     return "\n".join(parts)
 
@@ -1189,13 +1283,14 @@ def render_history(icon_b64: str) -> None:
             render_evolution_chain_ui(
                 str(entry.get("evolution_chain") or ""),
                 f"{group_idx}-{entry_idx}",
-                SEARCH_KEY,
             )
 
 
 def main() -> None:
     print("START main()")
     ensure_state()
+
+    st.markdown('<div class="content-wrap">', unsafe_allow_html=True)
 
     base_path = Path(__file__).parent
     fallback_svg = (
@@ -1240,24 +1335,15 @@ def main() -> None:
     capture_filter = st.session_state.get("capture_filter", "all")
 
     evo_jump = st.session_state.pop("jump_from_evo", False)
+    triggered_search = st.session_state.pop("trigger_search", False)
 
     left_col, right_col = st.columns([1, 2], gap="large", vertical_alignment="top")
 
     with left_col:
-        logo_path = resolve_asset_path("PokeSearch_logo.png", base_path)
-        logo_b64 = load_file_as_base64(logo_path) if logo_path else None
-        if logo_b64:
-            st.markdown(
-                f'<div class="logo-wrapper"><img src="data:image/png;base64,{logo_b64}" alt="Pokémon logo" /></div>',
-                unsafe_allow_html=True,
-            )
-        elif logo_path:
-            st.image(str(logo_path), use_container_width=True)
-        else:
-            st.markdown(
-                '<div class="logo-wrapper"><h1>PokéSearch!</h1></div>',
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            '<div class="site-logo"><img src="pokesearch/static/assets/PokeSearch_logo.png" alt="PokéSearch"/></div>',
+            unsafe_allow_html=True,
+        )
         pod = pokemon_of_the_day()
         if pod:
             sprite = pod.get("sprite") or _pokemon_icon_url(pod.get("name", ""), int(pod.get("id") or 0))
@@ -1305,15 +1391,22 @@ def main() -> None:
             placeholder="Search Pokémon or #",
             label_visibility="collapsed",
         )
-        st.markdown('<div class="btn-row">', unsafe_allow_html=True)
-        btn_col1, btn_col2, btn_col3 = st.columns([3, 1, 1])
-        with btn_col1:
-            search_clicked = st.button("Search", key="search_submit")
-        with btn_col2:
-            random_clicked = st.button("Random", key="random_submit")
-        with btn_col3:
-            clear_clicked = st.button("Clear", key="clear_search", disabled=not bool(query_value.strip()))
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        st.markdown('<div class="action-row">', unsafe_allow_html=True)
+        st.markdown('<div>', unsafe_allow_html=True)
+        search_clicked = st.button("Search", key="search_submit")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div>', unsafe_allow_html=True)
+        random_clicked = st.button("Random", key="random_submit")
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div>', unsafe_allow_html=True)
+        clear_clicked = st.button(
+            "Clear",
+            key="clear_search",
+            disabled=not bool(query_value.strip()),
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
         feedback_slot = st.empty()
         if msg := st.session_state.get("search_feedback"):
             feedback_slot.warning(msg)
@@ -1468,7 +1561,7 @@ def main() -> None:
 
 
 
-    if pending_lookup_trigger or history_trigger or evo_jump:
+    if pending_lookup_trigger or history_trigger or evo_jump or triggered_search:
         search_clicked = True
 
     results_container = right_col.container()
@@ -1550,62 +1643,62 @@ def main() -> None:
         st.session_state["search_feedback"] = ""
         if not filtered_species_index:
             st.warning("No Pokémon match the current filters. Try a different combination.")
-            return
-        pool_key = "|".join(
-            [
-                selected_generation,
-                selected_type,
-                color_filter,
-                habitat_filter,
-                shape_filter,
-                capture_filter,
-            ]
-        )
-        rand_pool = st.session_state.setdefault("rand_pool_map", {})
-        pool = rand_pool.get(pool_key, [])
-        if not pool:
-            pool = [
-                int(record.get("id", 0))
-                for record in filtered_species_index
-                if int(record.get("id", 0))
-            ]
-            random.shuffle(pool)
-            rand_pool[pool_key] = pool
-        if not pool:
-            st.warning("No Pokémon match the current filters. Try a different combination.")
-            return
-        idx = int(pool.pop())
-        name_guess = next(
-            (str(s["name"]) for s in filtered_species_index if int(s.get("id", 0)) == idx),
-            f"#{idx:03d}" if idx else "Random Pick",
-        )
-        built_entry = build_entry_from_api(idx, name_guess) if idx else None
-        entry = built_entry if built_entry else serialize_entry(random.choice(DATASET))
-        filter_summary = [
-            GENERATION_LABELS.get(selected_generation, "") if selected_generation != "all" else "",
-            TYPE_LABELS.get(selected_type, "") if selected_type != "all" else "",
-            _format_filter_value(COLOR_FILTERS.get(color_filter)) if color_filter != "all" else "",
-            _format_filter_value(HABITAT_FILTERS.get(habitat_filter)) if habitat_filter != "all" else "",
-            _format_filter_value(SHAPE_FILTERS.get(shape_filter)) if shape_filter != "all" else "",
-            CAPTURE_BUCKETS.get(capture_filter, ("", None))[0] if capture_filter != "all" else "",
-        ]
-        meta_text = " · ".join([text for text in filter_summary if text]) or "Random pick"
-        add_to_history(
-            make_history_entry(
-                entry.get("name", name_guess),
-                entry.get("name", name_guess),
-                [entry],
-                meta_text,
-                shortcut_labels,
+        else:
+            pool_key = "|".join(
+                [
+                    selected_generation,
+                    selected_type,
+                    color_filter,
+                    habitat_filter,
+                    shape_filter,
+                    capture_filter,
+                ]
             )
-        )
-        anchor_placeholder.markdown(
-            '<div id="results-anchor"></div>',
-            unsafe_allow_html=True,
-        )
-        gallery_placeholder.empty()
-        st.session_state["should_scroll"] = True
-        scroll_triggered = True
+            rand_pool = st.session_state.setdefault("rand_pool_map", {})
+            pool = rand_pool.get(pool_key, [])
+            if not pool:
+                pool = [
+                    int(record.get("id", 0))
+                    for record in filtered_species_index
+                    if int(record.get("id", 0))
+                ]
+                random.shuffle(pool)
+                rand_pool[pool_key] = pool
+            if not pool:
+                st.warning("No Pokémon match the current filters. Try a different combination.")
+            else:
+                idx = int(pool.pop())
+                name_guess = next(
+                    (str(s["name"]) for s in filtered_species_index if int(s.get("id", 0)) == idx),
+                    f"#{idx:03d}" if idx else "Random Pick",
+                )
+                built_entry = build_entry_from_api(idx, name_guess) if idx else None
+                entry = built_entry if built_entry else serialize_entry(random.choice(DATASET))
+                filter_summary = [
+                    GENERATION_LABELS.get(selected_generation, "") if selected_generation != "all" else "",
+                    TYPE_LABELS.get(selected_type, "") if selected_type != "all" else "",
+                    _format_filter_value(COLOR_FILTERS.get(color_filter)) if color_filter != "all" else "",
+                    _format_filter_value(HABITAT_FILTERS.get(habitat_filter)) if habitat_filter != "all" else "",
+                    _format_filter_value(SHAPE_FILTERS.get(shape_filter)) if shape_filter != "all" else "",
+                    CAPTURE_BUCKETS.get(capture_filter, ("", None))[0] if capture_filter != "all" else "",
+                ]
+                meta_text = " · ".join([text for text in filter_summary if text]) or "Random pick"
+                add_to_history(
+                    make_history_entry(
+                        entry.get("name", name_guess),
+                        entry.get("name", name_guess),
+                        [entry],
+                        meta_text,
+                        shortcut_labels,
+                    )
+                )
+                anchor_placeholder.markdown(
+                    '<div id="results-anchor"></div>',
+                    unsafe_allow_html=True,
+                )
+                gallery_placeholder.empty()
+                st.session_state["should_scroll"] = True
+                scroll_triggered = True
 
     with history_container:
         render_history(pixel_icon_b64)
@@ -1620,11 +1713,11 @@ def main() -> None:
     footer_logo = load_pokeapi_logo(base_path)
     if footer_logo:
         powered_by = (
-            '<span class="footer-powered">Powered by '
-            f'<img class="powered-logo" src="data:image/png;base64,{footer_logo}" alt="PokéAPI logo" /></span>'
+            '<div class="footer-powered">Powered by</div>'
+            f'<img class="powered-logo" src="data:image/png;base64,{footer_logo}" alt="Powered by PokéAPI" />'
         )
     else:
-        powered_by = '<span class="footer-powered">Powered by PokéAPI</span>'
+        powered_by = '<div class="footer-powered">Powered by PokéAPI</div>'
     st.markdown(
         f"""
         <div class="footer-bar">
@@ -1653,6 +1746,8 @@ def main() -> None:
             - 8) ✅ Floating “Top” button scrolls smoothly to the header.
         """,
     )
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     print("END main()")
 
