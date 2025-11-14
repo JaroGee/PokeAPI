@@ -3,12 +3,12 @@ from __future__ import annotations
 import base64
 import html
 import random
+import textwrap
 from datetime import datetime
 import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
-from textwrap import dedent
 import streamlit as st
 
 # Be flexible whether this file is run as a module or as a script.
@@ -279,57 +279,6 @@ def inject_clear_button_js() -> None:
     return
 
 
-def inject_dropdown_css() -> None:
-    css = dedent("""
-    /* Scope to Streamlit app container only */
-    [data-testid="stAppViewContainer"] {
-
-    }
-    /* BaseWeb popover portal. Make layer itself transparent. */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"]{
-      background: transparent !important;
-      box-shadow: none !important;
-      z-index: 10000 !important; /* on top of cards */
-    }
-    /* The actual options panel */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="listbox"]{
-      background: #FFFFFF !important;
-      color: #111111 !important;
-      border: 1px solid #E0E0E0 !important;
-      border-radius: 10px !important;
-      box-shadow: 0 8px 24px rgba(0,0,0,.18) !important;
-      max-height: 60vh !important;
-      overflow: auto !important;
-    }
-    /* Clean option rows */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"]{
-      background: transparent !important;
-      color: #111111 !important;
-      border: 0 !important;
-      padding: 10px 14px !important;
-    }
-    /* Neutral hover and selected states */
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"]:hover,
-    [data-testid="stAppViewContainer"] div[data-baseweb="popover"] [role="option"][aria-selected="true"]{
-      background: #F2F2F2 !important;
-    }
-    /* Closed select field. Keep text visible and on white */
-    [data-testid="stSelectbox"] [data-baseweb="select"] > div:first-child{
-      background: #FFFFFF !important;
-      color: #111111 !important;
-      border: 1px solid #E0E0E0 !important;
-      border-radius: 12px !important;
-    }
-    /* Never hide the input text or placeholder */
-    [data-testid="stSelectbox"] input{
-      opacity: 1 !important;
-      color: inherit !important;
-      caret-color: auto !important;
-    }
-    """)
-    st.markdown(f"<style id='ps-dropdown-fix'>{css}</style>", unsafe_allow_html=True)
-
-
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
     for p in paths:
         try:
@@ -353,7 +302,6 @@ def set_page_metadata() -> Dict[str, str]:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    inject_dropdown_css()
 
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)
@@ -581,6 +529,70 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-testid="stTextInput"] input::placeholder {{
         color: rgba(0,0,0,0.55) !important;
+      }}
+      body [data-testid="stAppViewContainer"] select {{
+        color-scheme: light;
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        border: 2px solid rgba(17,17,17,0.22) !important;
+        border-radius: 22px !important;
+        min-height: 48px;
+        padding: 0.35rem 0.9rem;
+      }}
+      body [data-testid="stAppViewContainer"] select option,
+      body [data-testid="stAppViewContainer"] select optgroup {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
+      }}
+      [data-testid="stSelectbox"] input {{
+        pointer-events: none !important;
+        caret-color: transparent !important;
+        color: transparent !important;
+        opacity: 0 !important;
+      }}
+      [data-testid="stSelectbox"] input::placeholder {{
+        color: transparent !important;
+      }}
+      [data-testid="stSelectbox"] div[data-baseweb="select"],
+      [data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child,
+      [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        border-radius: 22px !important;
+        border: 2px solid rgba(17,17,17,0.18) !important;
+        caret-color: transparent !important;
+        color-scheme: light !important;
+      }}
+      [data-baseweb="layer"],
+      [data-baseweb="popover"] {{
+        background-color: transparent !important;
+        color-scheme: light !important;
+      }}
+      [data-baseweb="popover"] [role="listbox"],
+      [data-baseweb="select"] *,
+      [data-baseweb="popover"] [role="option"],
+      [data-baseweb="popover"] [data-baseweb="option"] {{
+        background: #ffffff !important;
+        color: #111111 !important;
+        box-shadow: none !important;
+        filter: none !important;
+        mix-blend-mode: normal !important;
+        color-scheme: light !important;
+      }}
+      [data-baseweb="popover"] [role="option"],
+      [data-baseweb="popover"] [data-baseweb="option"],
+      [data-baseweb="popover"] [role="option"] > div,
+      [data-baseweb="popover"] [data-baseweb="option"] > div {{
+        background-color: #ffffff !important;
+        color: #111111 !important;
+      }}
+      [data-baseweb="popover"] [role="option"][aria-selected="true"],
+      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"] {{
+        background-color: rgba(255,222,0,0.45) !important;
+      }}
+      [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover,
+      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
+        background-color: rgba(59,76,202,0.12) !important;
       }}
       .search-panel .button-row {{
         display: flex;
