@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+import streamlit as st
+
+st.set_page_config(
+    page_title="PokeSearch",
+    page_icon="⚡️",
+    layout="wide",
+)
+
 import base64
 import html
 import random
@@ -9,7 +17,6 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
-import streamlit as st
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
@@ -294,14 +301,6 @@ def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
 
 def set_page_metadata() -> Dict[str, str]:
     base_path = Path(__file__).parent
-    favicon_path = resolve_asset_path("PokeSearch_logo.png", base_path)
-
-    st.set_page_config(
-        page_title="PokéSearch!",
-        page_icon=str(favicon_path) if favicon_path else "️🔎",
-        layout="wide",
-        initial_sidebar_state="collapsed",
-    )
 
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)
@@ -512,24 +511,6 @@ def set_page_metadata() -> Dict[str, str]:
         min-height: 54px;
         font-size: 1rem;
       }}
-      [data-testid="stTextInput"] div[data-baseweb="input"],
-      [data-testid="stTextInput"] div[data-baseweb="input"] > div:first-child,
-      [data-testid="stTextInput"] div[data-baseweb="input"] input {{
-        background-color: #ffffff !important;
-        color: #111111 !important;
-        border-radius: 22px !important;
-        border: 2px solid rgba(17,17,17,0.18) !important;
-        color-scheme: light !important;
-        caret-color: #3b4cca !important;
-        box-shadow: none !important;
-      }}
-      [data-testid="stTextInput"] div[data-baseweb="input"]:focus-within {{
-        border-color: #3b4cca !important;
-        box-shadow: 0 0 0 2px rgba(59,76,202,0.2) !important;
-      }}
-      [data-testid="stTextInput"] input::placeholder {{
-        color: rgba(0,0,0,0.55) !important;
-      }}
       body [data-testid="stAppViewContainer"] select {{
         color-scheme: light;
         background-color: #ffffff !important;
@@ -552,56 +533,6 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-testid="stSelectbox"] input::placeholder {{
         color: transparent !important;
-      }}
-      [data-testid="stSelectbox"] div[data-baseweb="select"],
-      [data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child,
-      [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {{
-        background-color: #ffffff !important;
-        color: #111111 !important;
-        border-radius: 22px !important;
-        border: 2px solid rgba(17,17,17,0.18) !important;
-        caret-color: transparent !important;
-        color-scheme: light !important;
-      }}
-      [data-baseweb="layer"],
-      [data-baseweb="popover"] {{
-        background-color: transparent !important;
-        color-scheme: light !important;
-      }}
-      [data-baseweb="popover"] [role="listbox"],
-      [data-baseweb="select"] *,
-      [data-baseweb="popover"] [role="option"],
-      [data-baseweb="popover"] [data-baseweb="option"] {{
-        background: #ffffff !important;
-        color: #111111 !important;
-        box-shadow: none !important;
-        filter: none !important;
-        mix-blend-mode: normal !important;
-        color-scheme: light !important;
-      }}
-      [data-baseweb="popover"] [role="option"],
-      [data-baseweb="popover"] [data-baseweb="option"],
-      [data-baseweb="popover"] [role="option"] > div,
-      [data-baseweb="popover"] [data-baseweb="option"] > div {{
-        background-color: #ffffff !important;
-        color: #111111 !important;
-      }}
-      [data-baseweb="popover"] [role="option"][aria-selected="true"],
-      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"] {{
-        background-color: rgba(255,222,0,0.45) !important;
-      }}
-      [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover,
-      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
-        background-color: rgba(59,76,202,0.12) !important;
-      }}
-      .search-panel .button-row {{
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-      }}
-      .search-panel .button-row .stButton>button {{
-        min-width: 110px;
       }}
       div[aria-live="polite"],
       div[role="status"] {{
@@ -1167,6 +1098,7 @@ def render_history(icon_b64: str) -> None:
 
 
 def main() -> None:
+    print("START main()")
     assets = set_page_metadata()
     ensure_state()
 
@@ -1273,35 +1205,26 @@ def main() -> None:
             st.markdown('<div class="section-label">Search</div>', unsafe_allow_html=True)
             search_value = st.text_input(
                 "Search the Pokédex",
+                value=st.session_state.get("search_query", ""),
                 placeholder="Search Pokémon or #",
                 key="search_query_input",
                 label_visibility="collapsed",
                 autocomplete="off",
                 on_change=_mark_enter_submit,
             )
-            st.markdown('<div class="button-row">', unsafe_allow_html=True)
-            search_cols = st.columns(3)
-            with search_cols[0]:
-                search_clicked = st.button(
-                    "Search",
-                    use_container_width=True,
-                    key="search_submit",
-                )
-            with search_cols[1]:
-                random_clicked = st.button(
-                    "Random",
-                    use_container_width=True,
-                    key="random_submit",
-                )
-            with search_cols[2]:
-                reset_clicked = st.button(
+            btn_col1, btn_col2, btn_col3 = st.columns(3)
+            with btn_col1:
+                search_clicked = st.button("Search", use_container_width=True, key="search_submit")
+            with btn_col2:
+                random_clicked = st.button("Random", use_container_width=True, key="random_submit")
+            with btn_col3:
+                clear_clicked = st.button(
                     "Clear",
                     use_container_width=True,
                     key="clear_search",
-                    disabled=not bool(search_value),
+                    disabled=not bool(search_value.strip()),
                 )
-            st.markdown("</div>", unsafe_allow_html=True)
-            if reset_clicked:
+            if clear_clicked:
                 st.session_state["search_prefill"] = ""
                 st.session_state["search_query"] = ""
                 st.session_state["pending_lookup_id"] = None
@@ -1575,6 +1498,8 @@ def main() -> None:
             )
         )
         st.rerun()
+
+    print("END main()")
 
 
 if __name__ == "__main__":
