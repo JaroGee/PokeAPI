@@ -2,26 +2,86 @@ from __future__ import annotations
 
 import streamlit as st
 
-st.set_page_config(
-    page_title="PokeSearch",
-    page_icon="pokesearch/static/assets/pokesearch_favicons/pokeball_favicon.ico",
-    layout="wide",
-)
+
+def inject_global_css() -> None:
+    st.markdown(
+        """
+        <style>
+          :root { color-scheme: light; }
+
+          /* Inputs */
+          [data-testid="stTextInput"] input,
+          [data-testid="stSearchInput"] input,
+          input[type="text"], input[type="search"] {
+            background:#ffffff !important;
+            color:#0b1f33 !important;
+            border:1px solid #e6eaf1 !important;
+            border-radius:12px !important;
+            box-shadow:none !important;
+          }
+
+          /* Buttons */
+          .stButton > button {
+            background:#111827 !important;
+            color:#ffffff !important;
+            border:1px solid rgba(0,0,0,0.12) !important;
+            border-radius:8px !important;
+            padding:8px 14px !important;
+            line-height:1.1 !important;
+          }
+          .stButton > button:disabled {
+            background:#f5f7fb !important;
+            color:#0b1f33 !important;
+          }
+
+          /* Select control */
+          [data-baseweb="select"] > div {
+            background:#ffffff !important;
+            color:#0b1f33 !important;
+            border:1px solid #e6eaf1 !important;
+            border-radius:10px !important;
+            box-shadow:none !important;
+          }
+
+          /* Dropdown menu portal */
+          [data-baseweb="menu"], [role="listbox"] {
+            background:#ffffff !important;
+            color:#0b1f33 !important;
+            border:1px solid #e6eaf1 !important;
+            border-radius:10px !important;
+            box-shadow:0 10px 24px rgba(0,0,0,0.18) !important;
+            z-index:1000 !important;
+            border-width:1px !important;
+          }
+          [data-baseweb="menu"] [role="option"],
+          [role="listbox"] [role="option"] { color:#0b1f33 !important; }
+          [data-baseweb="menu"] [role="option"][aria-selected="true"] {
+            background:#f0f4ff !important;
+          }
+
+          /* Layout polish */
+          .search-row { display:flex; gap:12px; align-items:center; }
+          .search-row .stButton { margin-top:2px; }
+          .search-card { max-width:680px; margin:0 auto; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+st.set_page_config(page_title="PokéSearch", layout="wide")
+inject_global_css()
 
 import base64
-from collections import deque
 import html
 import random
-import time
 from datetime import date, datetime
 import re
 import unicodedata
 from pathlib import Path
-from typing import Deque, Dict, List, Sequence, Set, Tuple
+from typing import Any, Dict, List, Sequence, Set, Tuple
 
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
@@ -50,504 +110,23 @@ except Exception:  # pragma: no cover
 
 PAGE_SIZE = 8
 MAX_HISTORY = 64
-
-COLOR_PALETTE: Dict[str, str] = {
-    "red": "#ff0000",
-    "dark_red": "#cc0000",
-    "blue": "#3b4cca",
-    "yellow": "#ffde00",
-    "gold": "#b3a125",
-}
-
-DEBUG = False
 TTL_STATIC = 24 * 60 * 60
-TTL_SLOW = 7 * 24 * 60 * 60
-TTL_FAST = 3 * 60
-MAX_ENTRIES = 4000
 MAX_SPECIES_ID = 1025
-RATE = 50
-WINDOW = 60
-CALLS: Deque[float] = deque()
-
-CSS_OVERRIDES = """
-  :root {{
-    --poke-red: {poke_red};
-    --poke-dark-red: {poke_dark_red};
-    --poke-blue: {poke_blue};
-    --poke-yellow: {poke_yellow};
-    --poke-gold: {poke_gold};
-  }}
-  html, body, [data-testid="stAppRoot"], [data-testid="stAppViewContainer"],
-  [data-testid="stAppViewContainer"] > .main {{
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    min-height: 100vh;
-    color-scheme: light !important;
-  }}
-  [data-testid="stAppRoot"], [data-testid="stAppViewContainer"],
-  [data-testid="stAppViewContainer"] > .main, html, body {{
-    {background_style}
-  }}
-  body, p, div, span, label, input, button, h1, h2, h3, h4, h5, h6,
-  .stMarkdown, .stTextInput {{
-    color: #000000 !important;
-  }}
-  body, div, section {{
-    {cursor_style}
-  }}
-  body, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] > .main {{
-    overflow-x: hidden;
-  }}
-  .poke-card {{
-    background: rgba(255, 255, 255, 0.96);
-    border-radius: 20px;
-    border: 1px solid rgba(59, 76, 202, 0.15);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.08);
-    padding: 1.4rem;
-    margin-bottom: 1.25rem;
-  }}
-  .history-group {{
-    background: linear-gradient(135deg, rgba(59, 76, 202, 0.12), rgba(255, 222, 0, 0.16));
-    border: 1px solid rgba(59, 76, 202, 0.18);
-    border-radius: 24px;
-    padding: 1.35rem;
-    margin-bottom: 1.35rem;
-  }}
-  .history-header {{
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-  }}
-  .history-meta {{
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.65);
-  }}
-  .shortcut-row {{
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.6rem;
-  }}
-  .shortcut-pill {{
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,0.22);
-    background: rgba(255,255,255,0.92);
-    font-size: 0.8rem;
-  }}
-  .card-header {{
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 1.2rem;
-  }}
-  .card-header .name {{
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--poke-blue);
-  }}
-  .card-header .meta {{
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.65);
-  }}
-  .pixel-icon {{
-    height: 96px;
-    width: 96px;
-    object-fit: contain;
-    border-radius: 18px;
-    background: rgba(255,255,255,0.9);
-    border: 1px solid rgba(0,0,0,0.07);
-    padding: 0.5rem;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-  }}
-  .section-grid {{
-    display: grid;
-    gap: 0.75rem;
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    margin-top: 1rem;
-  }}
-  .entry-grid {{
-    display: grid;
-    gap: 0.9rem;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  }}
-  .section-block {{
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid rgba(179, 161, 37, 0.28);
-    border-radius: 15px;
-    padding: 0.65rem 0.85rem;
-  }}
-  .section-title {{
-    margin: 0 0 0.45rem;
-    font-size: 0.9rem;
-    color: var(--poke-gold);
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    font-weight: 600;
-  }}
-  .section-block ul {{
-    margin: 0;
-    padding-left: 1.15rem;
-    font-size: 0.9rem;
-  }}
-  .stButton>button {{
-    width: 100%;
-    border-radius: 14px;
-    font-weight: 700;
-    min-height: 48px;
-    letter-spacing: 0.01em;
-    transition: transform 0.2s ease;
-    background: #ffde00 !important;
-    color: #000000 !important;
-    border: 2px solid rgba(0,0,0,0.18) !important;
-    box-shadow: none !important;
-    white-space: nowrap;
-    min-width: 90px;
-  }}
-  button[aria-label="Search"]:hover, button[title="Search"]:hover,
-  button[aria-label="Random"]:hover, button[title="Random"]:hover {{
-    box-shadow: 0 16px 28px rgba(0, 0, 0, 0.25) !important;
-    transform: translateY(-1px);
-  }}
-  .stButton>button:disabled {{
-    opacity: 0.6;
-    box-shadow: none !important;
-    transform: none !important;
-  }}
-  [data-testid="stForm"] .stTextInput [aria-live=polite] {{
-    display: none !important;
-  }}
-  div[data-testid="stTextInputInstructions"],
-  [data-testid="stTextInputInstructions"],
-  .stTextInputInstructions,
-  div[data-testid="stTextInput"] label div:last-child,
-  div[data-testid="InputInstructions"],
-  .stTextInput div[data-testid="InputInstructions"] {{
-    display: none !important;
-  }}
-  .search-panel {{
-    padding: 1rem 1.25rem;
-    border-radius: 26px;
-    background: rgba(255,255,255,0.92);
-    border: 1px solid rgba(0,0,0,0.08);
-    margin-bottom: 1.25rem;
-  }}
-  .search-panel .section-label {{
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    color: rgba(0,0,0,0.55);
-    letter-spacing: 0.08em;
-    margin-bottom: 0.35rem;
-    font-weight: 600;
-  }}
-  .search-input-row {{
-    width: 100%;
-    margin-bottom: 0.75rem;
-  }}
-  [data-testid="stTextInput"] {{
-    width: 100%;
-  }}
-  [data-testid="stTextInput"] div[data-baseweb="input"] {{
-    width: 100% !important;
-    border-radius: 22px !important;
-    border: 2px solid rgba(17,17,17,0.18) !important;
-    min-height: 54px !important;
-    background-color: #ffffff !important;
-    box-shadow: none !important;
-    padding: 0 0.4rem !important;
-  }}
-  [data-testid="stTextInput"] div[data-baseweb="input"] > div {{
-    border: none !important;
-    background: transparent !important;
-  }}
-  [data-testid="stTextInput"] input {{
-    width: 100% !important;
-    font-size: 1rem !important;
-    color: #111111 !important;
-    background: transparent !important;
-    min-height: 48px !important;
-    padding: 0.35rem 0.65rem !important;
-    box-shadow: none !important;
-  }}
-  [data-testid="stTextInput"] input::placeholder {{
-    color: rgba(0, 0, 0, 0.5) !important;
-  }}
-  .btn-row {{
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    width: 100%;
-    margin-bottom: 0.75rem;
-  }}
-  .btn-row > * {{
-    flex: 1 1 auto;
-    min-width: 140px;
-  }}
-  .btn-row .stButton>button {{
-    width: 100%;
-    min-height: 48px;
-    font-weight: 700;
-  }}
-  [data-baseweb="select"] {{
-    font-family: inherit;
-  }}
-  [data-baseweb="select"] > div {{
-    background: #f1f2f4;
-    color: #111;
-    border-radius: 12px;
-    border: 1px solid rgba(0,0,0,0.12);
-    min-height: 48px;
-  }}
-  [data-baseweb="select"] svg {{
-    fill: #111 !important;
-    color: #111 !important;
-  }}
-  [data-baseweb="select"] [aria-expanded="true"] {{
-    outline: none;
-  }}
-  [data-baseweb="popover"],
-  [data-baseweb="menu"] {{
-    background: #ffffff;
-    color: #111;
-    border: 1px solid rgba(0,0,0,0.12);
-    border-radius: 12px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
-  }}
-  [data-baseweb="menu"] div[role="option"] {{
-    background: #ffffff;
-    color: #111;
-  }}
-  [data-baseweb="menu"] div[role="option"][aria-selected="true"] {{
-    background: #fff3b3;
-  }}
-  [data-baseweb="menu"] div[role="option"]:hover {{
-    background: #fff8cc;
-  }}
-  [class*="st-emotion-"][class*="-popover-"],
-  [class*="st-emotion-"][class*="-menu-"] {{
-    border-width: 1px !important;
-  }}
-  div[aria-live="polite"],
-  div[role="status"] {{
-    display: none !important;
-  }}
-  .gallery-title {{
-    font-size: 1.15rem;
-    font-weight: 700;
-    margin-bottom: 0.15rem;
-  }}
-  #random-pokemon {{
-    height: 140px;
-    margin: 0.5rem auto 1rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.75rem;
-  }}
-  #random-pokemon img {{
-    max-height: 100%;
-    width: auto;
-  }}
-  #random-pokemon .pod-label {{
-    display: flex;
-    flex-direction: column;
-    font-weight: 700;
-    color: #3b4cca;
-  }}
-  .pod-divider {{
-    border-top: 2px solid #000000;
-    margin: 0.75rem 0 1.25rem;
-    width: 100%;
-  }}
-  @media (max-width: 640px) {{
-    #random-pokemon {{
-      height: 70px;
-    }}
-  }}
-  .sprite-card {{
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.55rem 0.4rem 0.9rem;
-    border-radius: 0.85rem;
-    background: rgba(255,255,255,0.88);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.14);
-    text-decoration: none !important;
-  }}
-  .sprite-card img {{
-    width: 72px;
-    height: 72px;
-    display: block;
-  }}
-  .sprite-card div {{
-    font-weight: 700;
-    text-transform: capitalize;
-    color: #3b4cca;
-  }}
-  .meta-pill-grid {{
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-top: 0.75rem;
-  }}
-  .meta-pill {{
-    background: rgba(59, 76, 202, 0.08);
-    border: 1px solid rgba(59, 76, 202, 0.25);
-    border-radius: 18px;
-    padding: 0.35rem 0.9rem;
-    font-size: 0.85rem;
-    min-width: 110px;
-  }}
-  .meta-pill span {{
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    color: rgba(0,0,0,0.55);
-    letter-spacing: 0.05em;
-  }}
-  .meta-pill strong {{
-    font-size: 0.95rem;
-    display: block;
-  }}
-  .evo-wrapper {{
-    margin-top: 1rem;
-    border-top: 1px solid rgba(0,0,0,0.08);
-    padding-top: 0.85rem;
-  }}
-  .evo-path {{
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-bottom: 0.6rem;
-    flex-wrap: wrap;
-  }}
-  .evo-node {{
-    background: rgba(255,255,255,0.85);
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 12px;
-    padding: 0.45rem 0.55rem;
-    text-align: center;
-    min-width: 110px;
-  }}
-  .evo-node img {{
-    width: 52px;
-    height: 52px;
-    margin-bottom: 0.25rem;
-  }}
-  .evo-name {{
-    font-weight: 700;
-  }}
-  .evo-detail {{
-    font-size: 0.75rem;
-    color: rgba(0,0,0,0.6);
-  }}
-  .evo-arrow {{
-    font-size: 1.25rem;
-    color: rgba(0,0,0,0.4);
-  }}
-  .history-group h3,
-  .history-group h3 a,
-  .history-group h3 svg {{
-    display: none !important;
-  }}
-  .history-meta-badge {{
-    font-size: 0.85rem;
-    color: rgba(0,0,0,0.65);
-    margin-bottom: 0.55rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }}
-  .footer-bar {{
-    margin-top: 3rem;
-    text-align: center;
-    font-size: 0.85rem;
-    color: rgba(0,0,0,0.65);
-    padding-bottom: 4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    align-items: center;
-  }}
-  .footer-powered {{
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 600;
-    color: #3b4cca;
-  }}
-  .footer-powered img {{
-    width: 82px;
-    height: auto;
-    display: inline-block;
-  }}
-  .logo-wrapper {{
-    width: 100%;
-    text-align: center;
-    margin-bottom: 0.5rem;
-  }}
-  .logo-wrapper img {{
-    width: 100%;
-    height: auto;
-    display: block;
-    margin: 0 auto;
-  }}
-  [data-testid="stImage"] button,
-  [data-testid="stImage"] [data-testid="StyledFullScreenButton"],
-  button[title="View fullscreen"],
-  button[aria-label="View fullscreen"],
-  [data-testid="fullscreenButton"] {{
-    display: none !important;
-  }}
-  .stTextInput [aria-live=polite] {{
-    display: none !important;
-  }}
-  .main .block-container {{
-    padding-bottom: 7rem !important;
-  }}
-"""
-
-@st.cache_resource(show_spinner=False)
-def get_http() -> requests.Session:
-    session = requests.Session()
-    session.headers.update({"User-Agent": "PokeSearch/1.0 (+streamlit)"})
-    retry = Retry(
-        total=3,
-        backoff_factor=0.5,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=None,
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount("https://", adapter)
-    session.mount("http://", adapter)
-    return session
 
 
-def _record_hit() -> None:
-    try:
-        st.session_state["net_hits"] = st.session_state.get("net_hits", 0) + 1
-    except Exception:
-        pass
-
-
-def _gate() -> None:
-    now = time.time()
-    while CALLS and now - CALLS[0] > WINDOW:
-        CALLS.popleft()
-    if len(CALLS) >= RATE and CALLS:
-        pause = WINDOW - (now - CALLS[0]) + 0.05
-        time.sleep(max(pause, 0.05))
-    CALLS.append(time.time())
-
-
-def _fetch_json(url: str) -> Dict[str, object]:
-    _gate()
-    resp = get_http().get(url, timeout=(5, 20))
+@st.cache_data(show_spinner=False, ttl=24 * 60 * 60)
+def fetch_json(url: str) -> Any:
+    resp = requests.get(url, timeout=8)
     resp.raise_for_status()
-    _record_hit()
     return resp.json()
+
+
+def safe_fetch(url: str) -> Any | None:
+    try:
+        return fetch_json(url)
+    except Exception:
+        st.toast("Network is slow. Try again.", icon="⚠️")
+        return None
 
 
 def _normalize_identifier(value: int | str) -> str:
@@ -556,27 +135,27 @@ def _normalize_identifier(value: int | str) -> str:
     return value.strip().lower()
 
 
-@st.cache_data(ttl=TTL_STATIC, max_entries=MAX_ENTRIES, show_spinner=False)
 def get_pokemon(id_or_name: int | str) -> Dict[str, object]:
     ident = _normalize_identifier(id_or_name)
-    return _fetch_json(f"https://pokeapi.co/api/v2/pokemon/{ident}/")
+    data = safe_fetch(f"https://pokeapi.co/api/v2/pokemon/{ident}/")
+    return data or {}
 
 
-@st.cache_data(ttl=TTL_STATIC, max_entries=MAX_ENTRIES, show_spinner=False)
 def get_species(id_or_name: int | str) -> Dict[str, object]:
     ident = _normalize_identifier(id_or_name)
-    return _fetch_json(f"https://pokeapi.co/api/v2/pokemon-species/{ident}/")
+    data = safe_fetch(f"https://pokeapi.co/api/v2/pokemon-species/{ident}/")
+    return data or {}
 
 
-@st.cache_data(ttl=TTL_STATIC, max_entries=MAX_ENTRIES, show_spinner=False)
 def get_evolution_chain(chain_url: str) -> Dict[str, object]:
-    return _fetch_json(chain_url)
+    data = safe_fetch(chain_url)
+    return data or {}
 
 
-@st.cache_data(ttl=TTL_STATIC, max_entries=MAX_ENTRIES, show_spinner=False)
+@st.cache_data(ttl=TTL_STATIC, show_spinner=False)
 def load_type_index(type_name: str) -> List[int]:
     ident = _normalize_identifier(type_name)
-    payload = _fetch_json(f"https://pokeapi.co/api/v2/type/{ident}/")
+    payload = safe_fetch(f"https://pokeapi.co/api/v2/type/{ident}/") or {}
     ids: List[int] = []
     for entry in payload.get("pokemon", []):
         href = str((entry.get("pokemon") or {}).get("url", ""))
@@ -588,49 +167,43 @@ def load_type_index(type_name: str) -> List[int]:
     return ids
 
 
-@st.cache_data(ttl=TTL_STATIC, max_entries=MAX_ENTRIES, show_spinner=False)
+@st.cache_data(ttl=TTL_STATIC, show_spinner=False)
 def load_species_index() -> List[Dict[str, object]]:
-    try:
-        payload = _fetch_json("https://pokeapi.co/api/v2/pokemon-species?limit=20000")
-        out: List[Dict[str, object]] = []
-        for item in payload.get("results", []):
-            href = str(item.get("url", ""))
-            name = str(item.get("name", "")).strip()
-            try:
-                pid = int(href.rstrip("/").split("/")[-1])
-            except Exception:
-                continue
-            if pid <= MAX_SPECIES_ID:
-                out.append({"id": pid, "name": name})
-        out.sort(key=lambda item: int(item["id"]))
-        return out
-    except Exception:
+    payload = safe_fetch("https://pokeapi.co/api/v2/pokemon-species?limit=20000")
+    if not payload:
         return [{"id": entry.index, "name": entry.name} for entry in DATASET]
+    out: List[Dict[str, object]] = []
+    for item in payload.get("results", []):
+        href = str(item.get("url", ""))
+        name = str(item.get("name", "")).strip()
+        try:
+            pid = int(href.rstrip("/").split("/")[-1])
+        except Exception:
+            continue
+        if pid <= MAX_SPECIES_ID:
+            out.append({"id": pid, "name": name})
+    out.sort(key=lambda item: int(item["id"]))
+    return out
 
 
-@st.cache_data(ttl=TTL_SLOW, max_entries=MAX_ENTRIES, show_spinner=False)
 def list_types() -> Dict[str, object]:
-    return _fetch_json("https://pokeapi.co/api/v2/type")
+    return safe_fetch("https://pokeapi.co/api/v2/type") or {}
 
 
-@st.cache_data(ttl=TTL_SLOW, max_entries=MAX_ENTRIES, show_spinner=False)
 def list_colors() -> Dict[str, object]:
-    return _fetch_json("https://pokeapi.co/api/v2/pokemon-color")
+    return safe_fetch("https://pokeapi.co/api/v2/pokemon-color") or {}
 
 
-@st.cache_data(ttl=TTL_SLOW, max_entries=MAX_ENTRIES, show_spinner=False)
 def list_habitats() -> Dict[str, object]:
-    return _fetch_json("https://pokeapi.co/api/v2/pokemon-habitat")
+    return safe_fetch("https://pokeapi.co/api/v2/pokemon-habitat") or {}
 
 
-@st.cache_data(ttl=TTL_SLOW, max_entries=MAX_ENTRIES, show_spinner=False)
 def list_shapes() -> Dict[str, object]:
-    return _fetch_json("https://pokeapi.co/api/v2/pokemon-shape")
+    return safe_fetch("https://pokeapi.co/api/v2/pokemon-shape") or {}
 
 
-@st.cache_data(ttl=TTL_SLOW, max_entries=MAX_ENTRIES, show_spinner=False)
 def list_generations() -> Dict[str, object]:
-    return _fetch_json("https://pokeapi.co/api/v2/generation")
+    return safe_fetch("https://pokeapi.co/api/v2/generation") or {}
 
 GENERATION_FILTERS: Dict[str, tuple[int, int] | None] = {
     "all": None,
@@ -782,6 +355,13 @@ def load_file_as_base64(path: Path) -> str | None:
         return None
 
 
+def load_pokeapi_logo(base_path: Path) -> str | None:
+    logo_path = resolve_asset_path("pokeapi_256.png", base_path)
+    if not logo_path:
+        return None
+    return load_file_as_base64(logo_path)
+
+
 def asset_search_paths(filename: str, base_path: Path | None = None) -> List[Path]:
     base = base_path or Path(__file__).parent
     roots = [base]
@@ -815,8 +395,6 @@ def resolve_asset_path(filename: str, base_path: Path | None = None) -> Path | N
 def ensure_state() -> None:
     if "history" not in st.session_state:
         st.session_state["history"] = []
-    if "search_query" not in st.session_state:
-        st.session_state["search_query"] = ""
     if "generation_filter" not in st.session_state:
         st.session_state["generation_filter"] = "all"
     if "type_filter" not in st.session_state:
@@ -833,39 +411,20 @@ def ensure_state() -> None:
         st.session_state["rand_pool_map"] = {}
     if "search_prefill" not in st.session_state:
         st.session_state["search_prefill"] = ""
-    if "search_query_input" not in st.session_state:
-        st.session_state["search_query_input"] = ""
+    if "query" not in st.session_state:
+        st.session_state["query"] = ""
     if "search_feedback" not in st.session_state:
         st.session_state["search_feedback"] = ""
     if "species_attr_cache" not in st.session_state:
         st.session_state["species_attr_cache"] = {}
     if "pending_lookup_id" not in st.session_state:
         st.session_state["pending_lookup_id"] = None
-    if "enter_submit" not in st.session_state:
-        st.session_state["enter_submit"] = False
     if "force_search_query" not in st.session_state:
         st.session_state["force_search_query"] = None
-    if "clear_request" not in st.session_state:
-        st.session_state["clear_request"] = False
     if "last_search_key" not in st.session_state:
         st.session_state["last_search_key"] = None
     if "last_results" not in st.session_state:
         st.session_state["last_results"] = []
-    if "net_hits" not in st.session_state:
-        st.session_state["net_hits"] = 0
-
-
-def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
-    for p in paths:
-        try:
-            data = p.read_bytes()
-        except FileNotFoundError:
-            continue
-        encoded = base64.b64encode(data).decode("utf-8")
-        ext = p.suffix.lower()
-        mime = "image/png" if ext == ".png" else "image/jpeg"
-        return encoded, mime
-    return None, "image/jpeg"
 
 
 def _extract_species_metadata(species: Dict[str, object]) -> Dict[str, object]:
@@ -961,49 +520,6 @@ def build_entry_from_api(pokemon_id: int, name: str) -> Dict[str, object] | None
         "metadata": metadata,
         "evolution_chain": evolution_chain,
     }
-
-
-def set_page_metadata() -> Dict[str, str]:
-    base_path = Path(__file__).parent
-
-    candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
-    bg_image, bg_mime = _load_first_image_base64(candidates)
-    cursor_image, cursor_mime = (None, "image/png")
-    pokeapi_logo_path = base_path / "static" / "assets" / "pokeapi_256.png"
-    if not pokeapi_logo_path.exists():
-        pokeapi_logo_path = resolve_asset_path("pokeapi_256.png", base_path)
-    pokeapi_logo = load_file_as_base64(pokeapi_logo_path) if pokeapi_logo_path and pokeapi_logo_path.exists() else None
-    cursor_style = (
-        f'cursor: url("data:{cursor_mime};base64,{cursor_image}") 16 16, auto !important;'
-        if cursor_image
-        else "cursor: auto !important;"
-    )
-    if bg_image:
-        bg_style_lines = [
-            (
-                "background: linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.8)), "
-                f'url("data:{bg_mime};base64,{bg_image}") !important;'
-            ),
-            "background-size: cover !important;",
-            "background-position: center !important;",
-            "background-repeat: no-repeat !important;",
-            "background-attachment: fixed !important;",
-        ]
-        bg_style = "\\n".join(bg_style_lines) + "\\n"
-    else:
-        bg_style = ""
-    colors = COLOR_PALETTE
-    css_block = CSS_OVERRIDES.format(
-        poke_red=colors["red"],
-        poke_dark_red=colors["dark_red"],
-        poke_blue=colors["blue"],
-        poke_yellow=colors["yellow"],
-        poke_gold=colors["gold"],
-        background_style=bg_style,
-        cursor_style=cursor_style,
-    )
-    st.markdown(f"<style>{css_block}</style>", unsafe_allow_html=True)
-    return {"pokeapi_logo": pokeapi_logo}
 
 
 
@@ -1321,7 +837,6 @@ def render_history(icon_b64: str) -> None:
 
 def main() -> None:
     print("START main()")
-    assets = set_page_metadata()
     ensure_state()
 
     base_path = Path(__file__).parent
@@ -1348,9 +863,9 @@ def main() -> None:
             st.session_state["pending_lookup_id"] = sprite_id
             st.session_state["force_search_query"] = display_name
             st.session_state["search_feedback"] = ""
-            st.session_state["enter_submit"] = True
         st.query_params.clear()
     pending_lookup_trigger = False
+    history_trigger = False
     search_clicked = False
     random_clicked = False
     query_trimmed = ""
@@ -1400,291 +915,244 @@ def main() -> None:
                 st.session_state["pending_lookup_id"] = pod.get("id")
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
-                st.session_state["enter_submit"] = True
                 st.rerun()
         st.markdown('<div class="pod-divider"></div>', unsafe_allow_html=True)
-        with st.container():
-            pending_lookup_id = st.session_state.get("pending_lookup_id")
-            pending_lookup_trigger = False
-            if pending_lookup_id is not None:
-                st.session_state["search_prefill"] = str(pending_lookup_id)
-                st.session_state["pending_lookup_id"] = None
-                pending_lookup_trigger = True
 
-            force_value = st.session_state.get("force_search_query")
-            if force_value is not None:
-                st.session_state["search_prefill"] = force_value
-                st.session_state["force_search_query"] = None
+        pending_lookup_trigger = False
+        pending_lookup_id = st.session_state.get("pending_lookup_id")
+        if pending_lookup_id is not None:
+            st.session_state["query"] = str(pending_lookup_id)
+            st.session_state["pending_lookup_id"] = None
+            pending_lookup_trigger = True
 
-            if st.session_state["search_prefill"]:
-                st.session_state["search_query_input"] = st.session_state["search_prefill"]
-                st.session_state["search_prefill"] = ""
-            if st.session_state.get("clear_request"):
-                st.session_state["search_query_input"] = ""
-                st.session_state["search_prefill"] = ""
-                st.session_state["force_search_query"] = None
-                st.session_state["clear_request"] = False
-            st.markdown('<div class="section-label">Search</div>', unsafe_allow_html=True)
-            search_clicked = random_clicked = clear_clicked = False
-            with st.form("search_form", clear_on_submit=False):
-                st.markdown('<div class="search-input-row">', unsafe_allow_html=True)
-                search_value = st.text_input(
-                    "Search the Pokédex",
-                    value=st.session_state.get("search_query", ""),
-                    placeholder="Search Pokémon or #",
-                    key="search_query_input",
-                    label_visibility="collapsed",
-                    autocomplete="off",
-                )
-                st.markdown("</div>", unsafe_allow_html=True)
-                st.markdown('<div class="btn-row">', unsafe_allow_html=True)
-                btn_col1, btn_col2, btn_col3 = st.columns(3)
-                with btn_col1:
-                    search_clicked = st.form_submit_button("Search", use_container_width=True)
-                with btn_col2:
-                    random_clicked = st.form_submit_button("Random", use_container_width=True)
-                with btn_col3:
-                    clear_clicked = st.form_submit_button(
-                        "Clear",
-                        use_container_width=True,
-                        disabled=not bool(search_value.strip()),
-                    )
-                st.markdown("</div>", unsafe_allow_html=True)
-                feedback_slot = st.empty()
-                if msg := st.session_state.get("search_feedback"):
-                    feedback_slot.warning(msg)
+        force_value = st.session_state.get("force_search_query")
+        if force_value:
+            st.session_state["query"] = force_value
+            st.session_state["force_search_query"] = None
 
-                history_entries = [
-                    entry for entry in st.session_state.history if isinstance(entry, dict)
-                ]
-                history_placeholder = "__history_placeholder__"
-                history_clear = "__history_clear__"
-                history_tokens: List[str] = [history_placeholder]
-                if history_entries:
-                    history_labels: Dict[str, str] = {history_placeholder: ""}
-                else:
-                    history_labels = {history_placeholder: "(no history)"}
-                for idx, entry_group in enumerate(history_entries):
-                    display_query = entry_group.get("query") or entry_group.get("label") or "Past search"
-                    history_token = f"entry_{idx}"
-                    history_tokens.append(history_token)
-                    history_labels[history_token] = f"{idx + 1}. {display_query}"
-                if history_entries:
-                    history_tokens.append(history_clear)
-                    history_labels[history_clear] = "Clear history"
-                st.markdown('<div class="history-select-wrapper">', unsafe_allow_html=True)
-                history_choice = st.selectbox(
-                    "Search History",
-                    history_tokens,
-                    format_func=lambda token: history_labels.get(token, ""),
-                    label_visibility="visible",
-                    key="history_select",
-                )
-                if history_entries and history_choice == history_clear:
-                    st.session_state.history = []
-                    st.rerun()
-                if history_entries and history_choice not in {history_placeholder, history_clear}:
-                    parts = history_choice.split("_", 1)
-                    if len(parts) == 2 and parts[0] == "entry":
-                        idx = int(parts[1])
-                        if 0 <= idx < len(history_entries):
-                            chosen_entry = history_entries[idx]
-                            restored_query = str(chosen_entry.get("query") or chosen_entry.get("label") or "")
-                            st.session_state["search_prefill"] = restored_query
-                            st.rerun()
+        if st.session_state.get("search_prefill"):
+            st.session_state["query"] = st.session_state["search_prefill"]
+            st.session_state["search_prefill"] = ""
 
-                generation_choice = st.selectbox(
-                    "Generation",
-                    list(GENERATION_FILTERS.keys()),
-                    key="generation_filter",
-                    format_func=lambda key: "Generation" if key == "all" else GENERATION_LABELS.get(key, key.title()),
-                    label_visibility="collapsed",
-                )
-                type_choice = st.selectbox(
-                    "Type",
-                    list(TYPE_FILTERS.keys()),
-                    key="type_filter",
-                    format_func=lambda key: "Type" if key == "all" else TYPE_LABELS.get(key, key.title()),
-                    label_visibility="collapsed",
-                )
-                color_choice = st.selectbox(
-                    "Color",
-                    list(COLOR_FILTERS.keys()),
-                    key="color_filter",
-                    format_func=lambda key: "Color" if key == "all" else key.replace("-", " ").title(),
-                    label_visibility="collapsed",
-                )
-                habitat_choice = st.selectbox(
-                    "Habitat",
-                    list(HABITAT_FILTERS.keys()),
-                    key="habitat_filter",
-                    format_func=lambda key: "Habitat" if key == "all" else key.replace("-", " ").title(),
-                    label_visibility="collapsed",
-                )
-                shape_choice = st.selectbox(
-                    "Body Shape",
-                    list(SHAPE_FILTERS.keys()),
-                    key="shape_filter",
-                    format_func=lambda key: "Body Shape" if key == "all" else key.replace("-", " ").title(),
-                    label_visibility="collapsed",
-                )
-                capture_choice = st.selectbox(
-                    "Capture Rate",
-                    list(CAPTURE_BUCKETS.keys()),
-                    key="capture_filter",
-                    format_func=lambda key: "Capture Rate" if key == "all" else CAPTURE_BUCKETS[key][0],
-                    label_visibility="collapsed",
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('<div class="search-card">', unsafe_allow_html=True)
+        st.subheader("Search")
+        query_value = st.text_input(
+            "Search",
+            key="query",
+            placeholder="Search Pokémon or #",
+            label_visibility="collapsed",
+        )
+        st.markdown('<div class="search-row">', unsafe_allow_html=True)
+        btn_col1, btn_col2, btn_col3 = st.columns([3, 1, 1])
+        with btn_col1:
+            search_clicked = st.button("Search", key="search_submit")
+        with btn_col2:
+            random_clicked = st.button("Random", key="random_submit")
+        with btn_col3:
+            clear_clicked = st.button("Clear", key="clear_search", disabled=not bool(query_value.strip()))
+        st.markdown("</div></div>", unsafe_allow_html=True)
+        feedback_slot = st.empty()
+        if msg := st.session_state.get("search_feedback"):
+            feedback_slot.warning(msg)
 
-            if clear_clicked:
-                st.session_state["search_prefill"] = ""
-                st.session_state["search_query"] = ""
-                st.session_state["pending_lookup_id"] = None
-                st.session_state["search_feedback"] = ""
-                st.session_state["enter_submit"] = False
-                st.session_state["force_search_query"] = ""
-                st.session_state["clear_request"] = True
-                st.rerun()
+        if clear_clicked:
+            st.session_state["query"] = ""
+            st.session_state["search_feedback"] = ""
+            st.session_state["last_results"] = []
+            query_value = ""
 
-            query_trimmed = search_value.strip()
-            st.session_state["search_query"] = query_trimmed
+        history_entries = [
+            entry for entry in st.session_state.history if isinstance(entry, dict)
+        ]
+        history_placeholder = "__history_placeholder__"
+        history_clear = "__history_clear__"
+        history_tokens: List[str] = [history_placeholder]
+        if history_entries:
+            history_labels: Dict[str, str] = {history_placeholder: ""}
+        else:
+            history_labels = {history_placeholder: "(no history)"}
+        for idx, entry_group in enumerate(history_entries):
+            display_query = entry_group.get("query") or entry_group.get("label") or "Past search"
+            history_token = f"entry_{idx}"
+            history_tokens.append(history_token)
+            history_labels[history_token] = f"{idx + 1}. {display_query}"
+        if history_entries:
+            history_tokens.append(history_clear)
+            history_labels[history_clear] = "Clear history"
+        st.markdown('<div class="history-select-wrapper">', unsafe_allow_html=True)
+        history_choice = st.selectbox(
+            "Search History",
+            history_tokens,
+            format_func=lambda token: history_labels.get(token, ""),
+            label_visibility="visible",
+            key="history_select",
+        )
+        if history_entries and history_choice == history_clear:
+            st.session_state.history = []
+            history_entries = []
+        elif history_entries and history_choice not in {history_placeholder, history_clear}:
+            parts = history_choice.split("_", 1)
+            if len(parts) == 2 and parts[0] == "entry":
+                idx = int(parts[1])
+                if 0 <= idx < len(history_entries):
+                    chosen_entry = history_entries[idx]
+                    restored_query = str(chosen_entry.get("query") or chosen_entry.get("label") or "")
+                    st.session_state["query"] = restored_query
+                    history_trigger = True
 
-            selected_generation = generation_choice
-            selected_type = type_choice
-            color_filter = color_choice
-            habitat_filter = habitat_choice
-            shape_filter = shape_choice
-            capture_filter = capture_choice
+        generation_choice = st.selectbox(
+            "Generation",
+            list(GENERATION_FILTERS.keys()),
+            key="generation_filter",
+            format_func=lambda key: "Generation" if key == "all" else GENERATION_LABELS.get(key, key.title()),
+            label_visibility="collapsed",
+        )
+        type_choice = st.selectbox(
+            "Type",
+            list(TYPE_FILTERS.keys()),
+            key="type_filter",
+            format_func=lambda key: "Type" if key == "all" else TYPE_LABELS.get(key, key.title()),
+            label_visibility="collapsed",
+        )
+        color_choice = st.selectbox(
+            "Color",
+            list(COLOR_FILTERS.keys()),
+            key="color_filter",
+            format_func=lambda key: "Color" if key == "all" else key.replace("-", " " ).title(),
+            label_visibility="collapsed",
+        )
+        habitat_choice = st.selectbox(
+            "Habitat",
+            list(HABITAT_FILTERS.keys()),
+            key="habitat_filter",
+            format_func=lambda key: "Habitat" if key == "all" else key.replace("-", " " ).title(),
+            label_visibility="collapsed",
+        )
+        shape_choice = st.selectbox(
+            "Body Shape",
+            list(SHAPE_FILTERS.keys()),
+            key="shape_filter",
+            format_func=lambda key: "Body Shape" if key == "all" else key.replace("-", " " ).title(),
+            label_visibility="collapsed",
+        )
+        capture_choice = st.selectbox(
+            "Capture Rate",
+            list(CAPTURE_BUCKETS.keys()),
+            key="capture_filter",
+            format_func=lambda key: "Capture Rate" if key == "all" else CAPTURE_BUCKETS[key][0],
+            label_visibility="collapsed",
+        )
 
-            filter_values = {
-                "generation": generation_choice,
-                "type": type_choice,
-                "color": color_choice,
-                "habitat": habitat_choice,
-                "shape": shape_choice,
-                "capture": capture_choice,
-            }
-            filter_signature = (
-                generation_choice,
-                type_choice,
-                color_choice,
-                habitat_choice,
-                shape_choice,
-                capture_choice,
-            )
-            filters_active = any(value != "all" for value in filter_values.values())
-            filtered_species_index = _filter_species_by_generation(
-                species_index, generation_choice
-            )
-            filtered_species_index = _filter_species_by_type(
-                filtered_species_index, type_choice
-            )
-            filtered_species_index = _apply_additional_filters(
-                filtered_species_index,
-                color_choice,
-                habitat_choice,
-                shape_choice,
-                capture_choice,
-            )
-            shortcuts = {}
-            if selected_generation != "all":
-                shortcuts["@generation"] = GENERATION_LABELS.get(selected_generation, "")
-            if selected_type != "all":
-                shortcuts["@type"] = TYPE_LABELS.get(selected_type, "")
-            if color_filter != "all":
-                shortcuts["@color"] = color_filter.replace("-", " ").title()
-            if habitat_filter != "all":
-                shortcuts["@habitat"] = habitat_filter.replace("-", " ").title()
-            if shape_filter != "all":
-                shortcuts["@shape"] = shape_filter.replace("-", " ").title()
-            if capture_filter != "all":
-                shortcuts["@capture"] = CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]
+        selected_generation = generation_choice
+        selected_type = type_choice
+        color_filter = color_choice
+        habitat_filter = habitat_choice
+        shape_filter = shape_choice
+        capture_filter = capture_choice
+
+        query_trimmed = st.session_state.get("query", "").strip()
+
+        filter_values = {
+            "generation": generation_choice,
+            "type": type_choice,
+            "color": color_choice,
+            "habitat": habitat_choice,
+            "shape": shape_choice,
+            "capture": capture_choice,
+        }
+        filter_signature = (
+            generation_choice,
+            type_choice,
+            color_choice,
+            habitat_choice,
+            shape_choice,
+            capture_choice,
+        )
+        filters_active = any(value != "all" for value in filter_values.values())
+        filtered_species_index = _filter_species_by_generation(
+            species_index, generation_choice
+        )
+        filtered_species_index = _filter_species_by_type(
+            filtered_species_index, type_choice
+        )
+        filtered_species_index = _apply_additional_filters(
+            filtered_species_index,
+            color_choice,
+            habitat_choice,
+            shape_choice,
+            capture_choice,
+        )
+        shortcuts = {}
+        if selected_generation != "all":
+            shortcuts["@generation"] = GENERATION_LABELS.get(selected_generation, "")
+        if selected_type != "all":
+            shortcuts["@type"] = TYPE_LABELS.get(selected_type, "")
+        if color_filter != "all":
+            shortcuts["@color"] = color_filter.replace("-", " ").title()
+        if habitat_filter != "all":
+            shortcuts["@habitat"] = habitat_filter.replace("-", " ").title()
+        if shape_filter != "all":
+            shortcuts["@shape"] = shape_filter.replace("-", " ").title()
+        if capture_filter != "all":
+            shortcuts["@capture"] = CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]
+
+
+
+    if pending_lookup_trigger or history_trigger:
+        search_clicked = True
+
     results_container = right_col.container()
     with results_container:
         gallery_placeholder = st.empty()
         history_container = st.container()
 
-    if st.session_state.get("enter_submit"):
-        search_clicked = True
-        st.session_state["enter_submit"] = False
-
-    with history_container:
-        render_history(pixel_icon_b64)
-
-    footer_logo = assets.get("pokeapi_logo")
-    if footer_logo:
-        powered_by = (
-            '<span class="footer-powered">Powered by '
-            f'<img src="data:image/png;base64,{footer_logo}" alt="PokéAPI logo" /></span>'
-        )
-    else:
-        powered_by = '<span class="footer-powered">Powered by PokéAPI</span>'
-    st.markdown(
-        f"""
-        <div class="footer-bar">
-          <span>Crafted by Jaro Gee. Pokémon and Pokémon character names are trademarks of Nintendo, Creatures, and GAME FREAK.</span>
-          <span>All artwork (logos, background, sprites) © their respective owners and is used here in a non-commercial fan project.</span>
-          {powered_by}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if pending_lookup_trigger:
-        search_clicked = True
-        query_trimmed = st.session_state["search_query_input"].strip()
-
     if search_clicked:
         st.session_state["search_feedback"] = ""
         if not query_trimmed and not filters_active:
             st.session_state["search_feedback"] = "Enter a Pokémon name or apply at least one filter to search."
-            st.rerun()
-            return
-        search_key = ("q", query_trimmed, filter_signature)
-        if query_trimmed.isdigit():
-            matches = [
-                s for s in filtered_species_index if int(s.get("id", 0)) == int(query_trimmed)
-            ]
-        elif query_trimmed:
-            needle = query_trimmed.lower()
-            matches = [s for s in filtered_species_index if needle in str(s["name"]).lower()]
         else:
-            matches = filtered_species_index
-        if not matches:
-            st.session_state["search_feedback"] = "No Pokémon found. Try a different name or number."
-            st.rerun()
-            return
-        if len(matches) > 8:
-            gallery_placeholder.empty()
-            with gallery_placeholder.container():
-                render_sprite_gallery(matches)
-            return
-        if st.session_state.get("last_search_key") == search_key:
-            serialized = list(st.session_state.get("last_results", []))
-        else:
-            limit = len(matches)
-            built: List[Dict[str, object]] = []
-            for s in matches[:limit]:
-                built_entry = build_entry_from_api(int(s["id"]), str(s["name"]))
-                if built_entry:
-                    built.append(built_entry)
-            serialized = built
-            st.session_state["last_search_key"] = search_key
-            st.session_state["last_results"] = serialized
-        label = query_trimmed or "Full Library"
-        filter_labels = [
-            ("Generation", selected_generation != "all", GENERATION_LABELS.get(selected_generation, "")),
-            ("Type", selected_type != "all", TYPE_LABELS.get(selected_type, "")),
-            ("Color", color_filter != "all", _format_filter_value(COLOR_FILTERS.get(color_filter))),
-            ("Habitat", habitat_filter != "all", _format_filter_value(HABITAT_FILTERS.get(habitat_filter))),
-            ("Shape", shape_filter != "all", _format_filter_value(SHAPE_FILTERS.get(shape_filter))),
-            ("Capture", capture_filter != "all", CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]),
-        ]
-        meta_parts = [text for _label, active, text in filter_labels if active and text]
-        meta_text = " · ".join(meta_parts)
-        add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
-        st.rerun()
+            search_key = ("q", query_trimmed, filter_signature)
+            if query_trimmed.isdigit():
+                matches = [
+                    s for s in filtered_species_index if int(s.get("id", 0)) == int(query_trimmed)
+                ]
+            elif query_trimmed:
+                needle = query_trimmed.lower()
+                matches = [s for s in filtered_species_index if needle in str(s["name"]).lower()]
+            else:
+                matches = filtered_species_index
+            if not matches:
+                st.session_state["search_feedback"] = "No Pokémon found. Try a different name or number."
+            elif len(matches) > 8:
+                gallery_placeholder.empty()
+                with gallery_placeholder.container():
+                    render_sprite_gallery(matches)
+                return
+            else:
+                if st.session_state.get("last_search_key") == search_key:
+                    serialized = list(st.session_state.get("last_results", []))
+                else:
+                    limit = len(matches)
+                    built: List[Dict[str, object]] = []
+                    for s in matches[:limit]:
+                        built_entry = build_entry_from_api(int(s["id"]), str(s["name"]))
+                        if built_entry:
+                            built.append(built_entry)
+                    serialized = built
+                    st.session_state["last_search_key"] = search_key
+                    st.session_state["last_results"] = serialized
+                label = query_trimmed or "Full Library"
+                filter_labels = [
+                    ("Generation", selected_generation != "all", GENERATION_LABELS.get(selected_generation, "")),
+                    ("Type", selected_type != "all", TYPE_LABELS.get(selected_type, "")),
+                    ("Color", color_filter != "all", _format_filter_value(COLOR_FILTERS.get(color_filter))),
+                    ("Habitat", habitat_filter != "all", _format_filter_value(HABITAT_FILTERS.get(habitat_filter))),
+                    ("Shape", shape_filter != "all", _format_filter_value(SHAPE_FILTERS.get(shape_filter))),
+                    ("Capture", capture_filter != "all", CAPTURE_BUCKETS.get(capture_filter, ("", None))[0]),
+                ]
+                meta_parts = [text for _label, active, text in filter_labels if active and text]
+                meta_text = " · ".join(meta_parts)
+                add_to_history(make_history_entry(label, query_trimmed, serialized, meta_text, []))
 
     if random_clicked:
         st.session_state["search_feedback"] = ""
@@ -1739,10 +1207,28 @@ def main() -> None:
                 [],
             )
         )
-        st.rerun()
 
-    if DEBUG:
-        st.caption(f"Network hits this run: {st.session_state.get('net_hits', 0)}")
+    with history_container:
+        render_history(pixel_icon_b64)
+
+    footer_logo = load_pokeapi_logo(base_path)
+    if footer_logo:
+        powered_by = (
+            '<span class="footer-powered">Powered by '
+            f'<img src="data:image/png;base64,{footer_logo}" alt="PokéAPI logo" /></span>'
+        )
+    else:
+        powered_by = '<span class="footer-powered">Powered by PokéAPI</span>'
+    st.markdown(
+        f"""
+        <div class="footer-bar">
+          <span>Crafted by Jaro Gee. Pokémon and Pokémon character names are trademarks of Nintendo, Creatures, and GAME FREAK.</span>
+          <span>All artwork (logos, background, sprites) © their respective owners and is used here in a non-commercial fan project.</span>
+          {powered_by}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     print("END main()")
 
