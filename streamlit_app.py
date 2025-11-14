@@ -504,12 +504,26 @@ def set_page_metadata() -> Dict[str, str]:
         margin-bottom: 0.35rem;
         font-weight: 600;
       }}
-      .search-panel input,
-      .search-panel select {{
-        border-radius: 22px;
-        border: 2px solid rgba(0,0,0,0.12);
-        min-height: 54px;
-        font-size: 1rem;
+      .search-input-row input {{
+        width: 100% !important;
+        border-radius: 22px !important;
+        border: 2px solid rgba(17,17,17,0.18) !important;
+        min-height: 54px !important;
+        font-size: 1rem !important;
+        background-color: #ffffff !important;
+        color: #111111 !important;
+        box-shadow: none !important;
+      }}
+      .search-button-row {{
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+      }}
+      .search-button-row .stButton>button {{
+        width: 100%;
+        min-height: 48px;
+        font-weight: 700;
       }}
       body [data-testid="stAppViewContainer"] select {{
         color-scheme: light;
@@ -1203,6 +1217,7 @@ def main() -> None:
                 st.session_state["force_search_query"] = None
                 st.session_state["clear_request"] = False
             st.markdown('<div class="section-label">Search</div>', unsafe_allow_html=True)
+            st.markdown('<div class="search-input-row">', unsafe_allow_html=True)
             search_value = st.text_input(
                 "Search the Pokédex",
                 value=st.session_state.get("search_query", ""),
@@ -1212,6 +1227,8 @@ def main() -> None:
                 autocomplete="off",
                 on_change=_mark_enter_submit,
             )
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown('<div class="search-button-row">', unsafe_allow_html=True)
             btn_col1, btn_col2, btn_col3 = st.columns(3)
             with btn_col1:
                 search_clicked = st.button("Search", use_container_width=True, key="search_submit")
@@ -1224,6 +1241,7 @@ def main() -> None:
                     key="clear_search",
                     disabled=not bool(search_value.strip()),
                 )
+            st.markdown("</div>", unsafe_allow_html=True)
             if clear_clicked:
                 st.session_state["search_prefill"] = ""
                 st.session_state["search_query"] = ""
