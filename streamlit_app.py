@@ -544,56 +544,6 @@ def set_page_metadata() -> Dict[str, str]:
         background-color: #ffffff !important;
         color: #111111 !important;
       }}
-      [data-testid="stSelectbox"] input {{
-        pointer-events: none !important;
-        caret-color: transparent !important;
-        color: transparent !important;
-        opacity: 0 !important;
-      }}
-      [data-testid="stSelectbox"] input::placeholder {{
-        color: transparent !important;
-      }}
-      [data-testid="stSelectbox"] div[data-baseweb="select"],
-      [data-testid="stSelectbox"] div[data-baseweb="select"] > div:first-child,
-      [data-testid="stSelectbox"] div[data-baseweb="select"] [role="combobox"] {{
-        background-color: #ffffff !important;
-        color: #111111 !important;
-        border-radius: 22px !important;
-        border: 2px solid rgba(17,17,17,0.18) !important;
-        caret-color: transparent !important;
-        color-scheme: light !important;
-      }}
-      [data-baseweb="layer"],
-      [data-baseweb="popover"] {{
-        background-color: transparent !important;
-        color-scheme: light !important;
-      }}
-      [data-baseweb="popover"] [role="listbox"],
-      [data-baseweb="select"] *,
-      [data-baseweb="popover"] [role="option"],
-      [data-baseweb="popover"] [data-baseweb="option"] {{
-        background: #ffffff !important;
-        color: #111111 !important;
-        box-shadow: none !important;
-        filter: none !important;
-        mix-blend-mode: normal !important;
-        color-scheme: light !important;
-      }}
-      [data-baseweb="popover"] [role="option"],
-      [data-baseweb="popover"] [data-baseweb="option"],
-      [data-baseweb="popover"] [role="option"] > div,
-      [data-baseweb="popover"] [data-baseweb="option"] > div {{
-        background-color: #ffffff !important;
-        color: #111111 !important;
-      }}
-      [data-baseweb="popover"] [role="option"][aria-selected="true"],
-      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="true"] {{
-        background-color: rgba(255,222,0,0.45) !important;
-      }}
-      [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover,
-      [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
-        background-color: rgba(59,76,202,0.12) !important;
-      }}
       .search-panel .button-row {{
         display: flex;
         gap: 0.5rem;
@@ -845,6 +795,78 @@ def set_page_metadata() -> Dict[str, str]:
         padding-bottom: 7rem !important;
       }}
     </style>
+    <style>
+:root{{
+  --dropdown-bg: #FFFFFF;
+  --dropdown-ink: #111111;
+  --dropdown-hover: #F2F2F2;
+  --dropdown-border: #E0E0E0;
+  --dropdown-shadow: 0 8px 24px rgba(0,0,0,.18);
+}}
+
+/* Streamlit select popover wrapper (BaseWeb popover portal) */
+div[data-baseweb="popover"]{{
+  background: transparent !important;       /* kill the black backing */
+  box-shadow: none !important;
+}}
+
+/* Actual list panel created by BaseWeb Select */
+div[role="listbox"]{{
+  background: var(--dropdown-bg) !important;
+  color: var(--dropdown-ink) !important;
+  border: 1px solid var(--dropdown-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--dropdown-shadow) !important;
+  overflow: auto !important;
+  max-height: 60vh;                         /* safety for long lists */
+}}
+
+/* Remove odd decorative bars some themes inject */
+div[role="listbox"]::before,
+div[role="listbox"]::after{{
+  display: none !important;
+}}
+
+/* Each option row */
+div[role="option"]{{
+  background: transparent !important;
+  border: 0 !important;
+  padding: 10px 14px !important;
+}}
+
+/* Hover and selected states = light gray */
+div[role="option"]:hover,
+div[role="option"][aria-selected="true"]{{
+  background: var(--dropdown-hover) !important;
+}}
+
+/* Ensure chevron is visible inside closed select */
+.stSelectbox [data-baseweb="select"] svg{{
+  opacity: 1 !important;
+  filter: none !important;
+}}
+
+/* Prevent a page-level dark layer showing through */
+html, body{{
+  background: inherit !important;
+}}
+[data-testid="stAppViewContainer"] > .main{{
+  background: inherit !important;
+  overflow: visible !important;             /* so popover isn't clipped */
+}}
+
+/* Tighten the closed select's field style slightly */
+.stSelectbox [data-baseweb="select"]{{
+  background: #FFFFFF !important;
+  color: var(--dropdown-ink) !important;
+  border: 1px solid var(--dropdown-border) !important;
+  border-radius: 12px !important;
+}}
+
+/* Make sure the list pops on top of everything */
+div[role="listbox"]{{ z-index: 10000 !important; }}
+div[data-baseweb="popover"]{{ z-index: 10000 !important; }}
+</style>
     """
     st.markdown(custom_css, unsafe_allow_html=True)
     return {"pokeapi_logo": pokeapi_logo}

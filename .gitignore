@@ -1,0 +1,24 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Virtualenv artifacts accidentally created at repo root
+/bin/
+/lib/
+/include/
+/share/
+/etc/
+pyvenv.cfg
+
+# Python cache/bytecode artifacts
+__pycache__/
+*.py[cod]
+*.so
+*.dylib
+
+# Tooling and editor metadata
+.streamlit/
+.vscode/
+.DS_Store
