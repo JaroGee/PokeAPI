@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-CSS_OVERRIDES = """
+CSS_TEMPLATE = """
   :root { color-scheme: light; }
   [data-testid="stAppViewContainer"] {
     background: url("pokesearch/static/assets/pokesearch_bg.jpeg") center/cover fixed no-repeat !important;
@@ -23,7 +23,7 @@ CSS_OVERRIDES = """
     max-width: 680px;
     margin: 0 auto 1.5rem;
   }
-  .search-row {
+  .btn-row {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
@@ -136,6 +136,22 @@ CSS_OVERRIDES = """
     width: 100% !important;
     height: auto !important;
   }
+  .dex-card {
+    background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 16px;
+    padding: 16px 18px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+    margin-top: 1rem;
+  }
+  .dex-card ul {
+    margin: 6px 0 10px 20px;
+    padding: 0;
+    list-style: disc;
+  }
+  .dex-card li {
+    margin: 2px 0;
+  }
   .pixel-icon {
     border-radius: 20px;
     background: rgba(255,255,255,0.95);
@@ -161,6 +177,12 @@ CSS_OVERRIDES = """
     box-shadow: 0 8px 16px rgba(0,0,0,0.14);
     text-decoration: none !important;
   }
+  .gallery-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+    color: #1f2d5c;
+  }
   .evo-row {
     display: flex;
     gap: 0.5rem;
@@ -172,16 +194,13 @@ CSS_OVERRIDES = """
     font-weight: 600;
     margin-bottom: 0.25rem;
   }
-  .powered-logo {
+  img[src*="pokeapi_256"] {
     width: 160px !important;
     height: auto !important;
     display: block;
     margin: 0.5rem auto !important;
   }
 """
-
-st.set_page_config(page_title="PokéSearch", layout="wide")
-st.markdown(f"<style>{CSS_OVERRIDES}</style>", unsafe_allow_html=True)
 
 import base64
 import html
@@ -193,6 +212,39 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence, Set, Tuple
 
 import requests
+
+SEARCH_KEY = "query"
+
+
+def _load_bg_image_b64() -> str:
+    bg_path = Path(__file__).parent / "static" / "assets" / "pokesearch_bg.jpeg"
+    try:
+        return base64.b64encode(bg_path.read_bytes()).decode("utf-8")
+    except FileNotFoundError:
+        return ""
+
+
+def _build_css(template: str) -> str:
+    bg_b64 = _load_bg_image_b64()
+    if bg_b64:
+        return template.replace(
+            "pokesearch/static/assets/pokesearch_bg.jpeg",
+            f"data:image/jpeg;base64,{bg_b64}",
+        )
+    return template
+
+
+def _request_rerun() -> None:
+    try:  # Streamlit >=1.29
+        st.rerun()
+    except AttributeError:  # fallback for older Streamlit
+        st.experimental_rerun()
+
+
+CSS_OVERRIDES = _build_css(CSS_TEMPLATE)
+
+st.set_page_config(page_title="PokéSearch", layout="wide")
+st.markdown(f"<style>{CSS_OVERRIDES}</style>", unsafe_allow_html=True)
 
 # Be flexible whether this file is run as a module or as a script.
 try:  # absolute import from package
@@ -525,8 +577,8 @@ def ensure_state() -> None:
         st.session_state["rand_pool_map"] = {}
     if "search_prefill" not in st.session_state:
         st.session_state["search_prefill"] = ""
-    if "query" not in st.session_state:
-        st.session_state["query"] = ""
+    if SEARCH_KEY not in st.session_state:
+        st.session_state[SEARCH_KEY] = ""
     if "search_feedback" not in st.session_state:
         st.session_state["search_feedback"] = ""
     if "species_attr_cache" not in st.session_state:
@@ -847,12 +899,13 @@ def render_evolution_chain_ui(chain_data: Dict[str, object] | None, key_prefix: 
                     display_label,
                     key=f"evo-{key_prefix}-{branch_idx}-{step_idx}-{species_name}",
                 ):
-                    st.session_state["query"] = species_name
+                    st.session_state[SEARCH_KEY] = species_name
                     st.session_state["force_search_query"] = species_name
                     st.session_state["pending_lookup_id"] = None
                     st.session_state["search_feedback"] = ""
                     st.session_state["last_search_key"] = None
-                    st.rerun()
+                    st.session_state["jump_from_evo"] = True
+                    _request_rerun()
             col_idx += 1
             if step_idx < len(branch) - 1:
                 with cols[col_idx]:
@@ -915,7 +968,7 @@ def render_entry_html(entry: Dict[str, object], fallback_icon_b64: str) -> str:
         "    </div>",
         "  </div>",
         f"  <p>{html.escape(entry['description'])}</p>",
-        f"  <div class=\"section-grid\">{sections_html}</div>",
+        f'  <div class="dex-card">{sections_html}</div>',
     ]
     if metadata_html:
         parts.append(metadata_html)
@@ -992,6 +1045,8 @@ def main() -> None:
     shape_filter = st.session_state.get("shape_filter", "all")
     capture_filter = st.session_state.get("capture_filter", "all")
 
+    evo_jump = st.session_state.pop("jump_from_evo", False)
+
     left_col, right_col = st.columns([1, 2], gap="large", vertical_alignment="top")
 
     with left_col:
@@ -1028,34 +1083,34 @@ def main() -> None:
                 st.session_state["pending_lookup_id"] = pod.get("id")
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
-                st.rerun()
+                _request_rerun()
         st.markdown('<div class="pod-divider"></div>', unsafe_allow_html=True)
 
         pending_lookup_trigger = False
         pending_lookup_id = st.session_state.get("pending_lookup_id")
         if pending_lookup_id is not None:
-            st.session_state["query"] = str(pending_lookup_id)
+            st.session_state[SEARCH_KEY] = str(pending_lookup_id)
             st.session_state["pending_lookup_id"] = None
             pending_lookup_trigger = True
 
         force_value = st.session_state.get("force_search_query")
         if force_value:
-            st.session_state["query"] = force_value
+            st.session_state[SEARCH_KEY] = force_value
             st.session_state["force_search_query"] = None
 
         if st.session_state.get("search_prefill"):
-            st.session_state["query"] = st.session_state["search_prefill"]
+            st.session_state[SEARCH_KEY] = st.session_state["search_prefill"]
             st.session_state["search_prefill"] = ""
 
         st.markdown('<div class="search-card">', unsafe_allow_html=True)
         st.subheader("Search")
         query_value = st.text_input(
             "Search",
-            key="query",
+            key=SEARCH_KEY,
             placeholder="Search Pokémon or #",
             label_visibility="collapsed",
         )
-        st.markdown('<div class="search-row">', unsafe_allow_html=True)
+        st.markdown('<div class="btn-row">', unsafe_allow_html=True)
         btn_col1, btn_col2, btn_col3 = st.columns([3, 1, 1])
         with btn_col1:
             search_clicked = st.button("Search", key="search_submit")
@@ -1069,9 +1124,10 @@ def main() -> None:
             feedback_slot.warning(msg)
 
         if clear_clicked:
-            st.session_state["query"] = ""
+            st.session_state[SEARCH_KEY] = ""
             st.session_state["search_feedback"] = ""
             st.session_state["last_results"] = []
+            st.session_state["force_search_query"] = ""
             query_value = ""
 
         history_entries = [
@@ -1110,7 +1166,7 @@ def main() -> None:
                 if 0 <= idx < len(history_entries):
                     chosen_entry = history_entries[idx]
                     restored_query = str(chosen_entry.get("query") or chosen_entry.get("label") or "")
-                    st.session_state["query"] = restored_query
+                    st.session_state[SEARCH_KEY] = restored_query
                     history_trigger = True
 
         generation_choice = st.selectbox(
@@ -1163,7 +1219,7 @@ def main() -> None:
         shape_filter = shape_choice
         capture_filter = capture_choice
 
-        query_trimmed = st.session_state.get("query", "").strip()
+        query_trimmed = st.session_state.get(SEARCH_KEY, "").strip()
 
         filter_values = {
             "generation": generation_choice,
@@ -1211,7 +1267,7 @@ def main() -> None:
 
 
 
-    if pending_lookup_trigger or history_trigger:
+    if pending_lookup_trigger or history_trigger or evo_jump:
         search_clicked = True
 
     results_container = right_col.container()
