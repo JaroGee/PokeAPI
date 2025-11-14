@@ -504,15 +504,33 @@ def set_page_metadata() -> Dict[str, str]:
         margin-bottom: 0.35rem;
         font-weight: 600;
       }}
-      .search-input-row input {{
+      [data-testid="stTextInput"] {{
+        width: 100%;
+      }}
+      [data-testid="stTextInput"] div[data-baseweb="input"] {{
         width: 100% !important;
         border-radius: 22px !important;
         border: 2px solid rgba(17,17,17,0.18) !important;
         min-height: 54px !important;
-        font-size: 1rem !important;
         background-color: #ffffff !important;
-        color: #111111 !important;
         box-shadow: none !important;
+        padding: 0 0.4rem !important;
+      }}
+      [data-testid="stTextInput"] div[data-baseweb="input"] > div {{
+        border: none !important;
+        background: transparent !important;
+      }}
+      [data-testid="stTextInput"] input {{
+        width: 100% !important;
+        font-size: 1rem !important;
+        color: #111111 !important;
+        background: transparent !important;
+        min-height: 48px !important;
+        padding: 0.35rem 0.65rem !important;
+        box-shadow: none !important;
+      }}
+      [data-testid="stTextInput"] input::placeholder {{
+        color: rgba(0, 0, 0, 0.5) !important;
       }}
       .search-button-row {{
         display: flex;
