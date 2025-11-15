@@ -671,14 +671,6 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
         background-color: #F7F7F7 !important;
       }}
-      [data-baseweb="menu"],
-      [data-baseweb="menu"]::before,
-      [data-baseweb="menu"]::after,
-      [data-baseweb="menu"] * {{
-        background: #ffffff !important;
-        background-color: #ffffff !important;
-        color: #111111 !important;
-      }}
       div[data-baseweb="popover"],
       div[data-baseweb="popover"] [role="listbox"],
       div[data-baseweb="select"] ul[role="listbox"] {{
