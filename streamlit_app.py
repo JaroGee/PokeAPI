@@ -415,8 +415,8 @@ def set_page_metadata() -> Dict[str, str]:
       [data-testid="stAppViewContainer"] > .main, html, body {{
         {bg_style}
       }}
-      body, p, div, span, label, input, button, h1, h2, h3, h4, h5, h6,
-      .stMarkdown, .stTextInput {{
+      body, p, span, label, input, button, h1, h2, h3, h4, h5, h6,
+      .stMarkdown {{
         color: #000000 !important;
       }}
       body, div, section {{
@@ -632,6 +632,7 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-baseweb="layer"],
       [data-baseweb="popover"] {{
+        background-color: transparent !important;
         color-scheme: light !important;
       }}
       [data-baseweb="popover"] [role="listbox"],
@@ -661,6 +662,7 @@ def set_page_metadata() -> Dict[str, str]:
         background-color: #F7F7F7 !important;
       }}
       div[data-baseweb="popover"],
+      div[data-baseweb="popover"] [role="listbox"],
       div[data-baseweb="select"] ul[role="listbox"] {{
         background-color: #ffffff !important;
       }}
