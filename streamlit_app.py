@@ -642,6 +642,7 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [data-baseweb="option"] {{
         background: #ffffff !important;
+        background-color: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
         filter: none !important;
@@ -652,6 +653,7 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] [data-baseweb="option"],
       [data-baseweb="popover"] [role="option"] > div,
       [data-baseweb="popover"] [data-baseweb="option"] > div {{
+        background: #ffffff !important;
         background-color: #ffffff !important;
         color: #111111 !important;
       }}
@@ -664,15 +666,25 @@ def set_page_metadata() -> Dict[str, str]:
         background-color: #F7F7F7 !important;
       }}
       div[data-baseweb="popover"],
+      div[data-baseweb="popover"]::before,
+      div[data-baseweb="popover"]::after,
       div[data-baseweb="popover"] > div,
+      div[data-baseweb="popover"] > div::before,
+      div[data-baseweb="popover"] > div::after,
       div[data-baseweb="layer"] > div[data-baseweb="popover"],
-      div[data-baseweb="select"] div[data-baseweb="popover"] {{
+      div[data-baseweb="layer"] > div[data-baseweb="popover"]::before,
+      div[data-baseweb="layer"] > div[data-baseweb="popover"]::after,
+      div[data-baseweb="select"] div[data-baseweb="popover"],
+      div[data-baseweb="select"] div[data-baseweb="popover"]::before,
+      div[data-baseweb="select"] div[data-baseweb="popover"]::after {{
+        background: #ffffff !important;
         background-color: #ffffff !important;
         border-radius: 18px !important;
         box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
       }}
       div[data-baseweb="popover"] [role="listbox"],
       div[data-baseweb="select"] ul[role="listbox"] {{
+        background: #ffffff !important;
         background-color: #ffffff !important;
       }}
       .search-panel .button-row {{
