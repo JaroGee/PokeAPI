@@ -415,8 +415,8 @@ def set_page_metadata() -> Dict[str, str]:
       [data-testid="stAppViewContainer"] > .main, html, body {{
         {bg_style}
       }}
-      body, p, div, span, label, input, button, h1, h2, h3, h4, h5, h6,
-      .stMarkdown, .stTextInput {{
+      body, p, span, label, input, button, h1, h2, h3, h4, h5, h6,
+      .stMarkdown {{
         color: #000000 !important;
       }}
       body, div, section {{
@@ -660,6 +660,11 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] [role="option"][aria-selected="false"]:hover,
       [data-baseweb="popover"] [data-baseweb="option"][aria-selected="false"]:hover {{
         background-color: #F7F7F7 !important;
+      }}
+      div[data-baseweb="popover"],
+      div[data-baseweb="popover"] [role="listbox"],
+      div[data-baseweb="select"] ul[role="listbox"] {{
+        background-color: #ffffff !important;
       }}
       .search-panel .button-row {{
         display: flex;
