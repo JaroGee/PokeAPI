@@ -632,6 +632,7 @@ def set_page_metadata() -> Dict[str, str]:
       }}
       [data-baseweb="layer"],
       [data-baseweb="popover"] {{
+        background: transparent !important;
         color-scheme: light !important;
       }}
       [data-baseweb="popover"] [role="listbox"],
@@ -639,6 +640,7 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] [role="option"],
       [data-baseweb="popover"] [data-baseweb="option"] {{
         background: #ffffff !important;
+        background-color: #ffffff !important;
         color: #111111 !important;
         box-shadow: none !important;
         filter: none !important;
@@ -649,6 +651,7 @@ def set_page_metadata() -> Dict[str, str]:
       [data-baseweb="popover"] [data-baseweb="option"],
       [data-baseweb="popover"] [role="option"] > div,
       [data-baseweb="popover"] [data-baseweb="option"] > div {{
+        background: #ffffff !important;
         background-color: #ffffff !important;
         color: #111111 !important;
       }}
@@ -663,6 +666,7 @@ def set_page_metadata() -> Dict[str, str]:
       div[data-baseweb="popover"],
       div[data-baseweb="popover"] [role="listbox"],
       div[data-baseweb="select"] ul[role="listbox"] {{
+        background: #ffffff !important;
         background-color: #ffffff !important;
       }}
       .search-panel .button-row {{
