@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
@@ -11,7 +12,13 @@ try:  # type: ignore[override]
 except Exception:  # pragma: no cover
     st = None  # type: ignore
 
-import requests
+APP_DIR = Path(__file__).parent / "app"
+if APP_DIR.exists():
+    app_dir_str = str(APP_DIR)
+    if app_dir_str not in sys.path:
+        sys.path.insert(0, app_dir_str)
+
+from util.http import get_json
 
 
 CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -44,9 +51,7 @@ def _write_json(path: Path, data) -> None:
 
 
 def _get(url: str) -> Dict:
-    resp = requests.get(url, timeout=30)
-    resp.raise_for_status()
-    return resp.json()
+    return get_json(url, timeout=30.0)
 
 
 def _now() -> int:

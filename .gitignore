@@ -17,6 +17,7 @@ __pycache__/
 *.py[cod]
 *.so
 *.dylib
+cache/
 
 # Tooling and editor metadata
 .streamlit/
