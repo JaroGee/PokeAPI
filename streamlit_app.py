@@ -9,6 +9,9 @@ import re
 import unicodedata
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple, Set
+import functools
+
+import requests
 import streamlit as st
 
 try:
@@ -56,6 +59,7 @@ except Exception:  # pragma: no cover - run as script
 
 PAGE_SIZE = 8
 MAX_HISTORY = 64
+TWEMOJI_BASE = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2"
 
 COLOR_PALETTE: Dict[str, str] = {
     "red": "#ff0000",
@@ -286,6 +290,34 @@ def inject_clear_button_js() -> None:
     return
 
 
+def _emoji_codepoints(emoji: str) -> str:
+    glyph = (emoji or "⚡️").strip()
+    points: List[str] = []
+    for ch in glyph:
+        code = ord(ch)
+        if 0xFE00 <= code <= 0xFE0F:
+            continue
+        points.append(f"{code:x}")
+    return "-".join(points) or "26a1"
+
+
+@functools.lru_cache(maxsize=64)
+def _twemoji_data_uri(codepoints: str, fmt: str) -> str | None:
+    if fmt == "svg":
+        url = f"{TWEMOJI_BASE}/svg/{codepoints}.svg"
+        mime = "image/svg+xml"
+    else:
+        url = f"{TWEMOJI_BASE}/72x72/{codepoints}.png"
+        mime = "image/png"
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+    except Exception:
+        return None
+    encoded = base64.b64encode(resp.content).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
+
+
 def _emoji_png_data_uri(emoji: str, px: int) -> str:
     if not Image or not ImageDraw or not ImageFont:
         return ""
@@ -332,10 +364,14 @@ def _emoji_svg_data_uri(emoji: str) -> str:
 
 
 def inject_emoji_favicons(emoji: str = "⚡️") -> None:
-    svg = _emoji_svg_data_uri(emoji)
-    png16 = _emoji_png_data_uri(emoji, 16)
-    png32 = _emoji_png_data_uri(emoji, 32)
-    png180 = _emoji_png_data_uri(emoji, 180)
+    codepoints = _emoji_codepoints(emoji)
+    twemoji_svg = _twemoji_data_uri(codepoints, "svg")
+    twemoji_png = _twemoji_data_uri(codepoints, "png")
+
+    svg = twemoji_svg or _emoji_svg_data_uri(emoji)
+    png16 = twemoji_png or _emoji_png_data_uri(emoji, 16)
+    png32 = twemoji_png or _emoji_png_data_uri(emoji, 32)
+    png180 = twemoji_png or _emoji_png_data_uri(emoji, 180)
     tags = [f'<link rel="icon" type="image/svg+xml" href="{svg}">']
     if png16:
         tags.append(f'<link rel="icon" type="image/png" sizes="16x16" href="{png16}">')
