@@ -41,7 +41,7 @@ The app launches at `http://localhost:8501` and offers:
 - **Filtered search** – combine generation, elemental type, PokéAPI color, habitat, body shape, or capture-rate buckets before searching by name or Pokédex number. Results exceeding eight entries show as a sprite grid you can click through; smaller sets render full cards with metadata pills and evolution chains.
 - **Timeline + Randomizer** – every query or random roll becomes part of a 64-item history with shortcut chips. The randomizer respects the active filters and rotates through cached pools so you don’t pull the same Pokémon twice until the pool is exhausted.
 - **Shareable URLs** – append `?sprite=6` (for Charizard) to the app URL to open the matching entry on load; every sprite and evolution node also links using this pattern.
-- **Accessibility niceties** – emoji favicons, keyboard submission support, and cached HTTP requests to keep PokéAPI calls snappy.
+- **Accessibility niceties** – branded lightning favicons (with emoji fallback), keyboard submission support, and cached HTTP requests to keep PokéAPI calls snappy.
 
 If you ever want to reset cached Streamlit data, run `streamlit cache clear`. To force new live data from PokéAPI, delete the `cache/` directory; it will be recreated automatically.
 
@@ -84,7 +84,7 @@ The front-end (`static/js/app.js`) debounces user input, renders suggestion list
 
 ## Troubleshooting
 - **429 / rate limits** – The HTTP helper (`app/util/http.py`) retries automatically, but if you see repeated errors, wait a bit or point the app at the offline dataset by disconnecting the network temporarily.
-- **Missing sprites or emojis** – Install Pillow (`pip install pillow`) so the emoji favicon/sprite fallbacks render locally. Without it, the app silently skips emoji generation but everything else works.
+- **Missing sprites or emojis** – Install Pillow (`pip install pillow`) so the emoji favicon/sprite fallbacks render locally whenever the bundled assets are absent. Without it, the app silently skips emoji generation but everything else works.
 - **Template assets not loading** – Ensure you run Flask from the repo root so `static/` is discoverable. Streamlit’s asset resolver also looks relative to the script; keep custom art in `static/assets/` to stay compatible.
 
 ## Credits

@@ -60,6 +60,16 @@ except Exception:  # pragma: no cover - run as script
 PAGE_SIZE = 8
 MAX_HISTORY = 64
 TWEMOJI_BASE = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2"
+FAVICON_MASK_COLOR = "#3b4cca"
+FAVICON_FILES: Sequence[Tuple[str, str | None, str | None, str]] = (
+    ("icon", "image/svg+xml", None, "favicon.svg"),
+    ("icon", "image/png", "32x32", "favicon-32x32.png"),
+    ("icon", "image/png", "16x16", "favicon-16x16.png"),
+    ("icon", "image/png", "192x192", "android-chrome-192x192.png"),
+    ("icon", "image/png", "512x512", "android-chrome-512x512.png"),
+    ("apple-touch-icon", "image/png", "180x180", "apple-touch-icon.png"),
+    ("mask-icon", None, None, "safari-pinned-tab.svg"),
+)
 
 COLOR_PALETTE: Dict[str, str] = {
     "red": "#ff0000",
@@ -363,7 +373,43 @@ def _emoji_svg_data_uri(emoji: str) -> str:
     return f"data:image/svg+xml;base64,{encoded}"
 
 
-def inject_emoji_favicons(emoji: str = "⚡️") -> None:
+def _file_data_uri(path: Path) -> str | None:
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return None
+    ext = path.suffix.lower()
+    if ext == ".svg":
+        mime = "image/svg+xml"
+    elif ext == ".png":
+        mime = "image/png"
+    else:
+        mime = "application/octet-stream"
+    encoded = base64.b64encode(raw).decode("ascii")
+    return f"data:{mime};base64,{encoded}"
+
+
+def _build_static_favicon_tags(base_path: Path | None = None) -> List[str]:
+    tags: List[str] = []
+    for rel, mime, sizes, filename in FAVICON_FILES:
+        path = resolve_asset_path(filename, base_path)
+        if not path:
+            continue
+        href = _file_data_uri(path)
+        if not href:
+            continue
+        mime_attr = f' type="{mime}"' if mime else ""
+        size_attr = f' sizes="{sizes}"' if sizes else ""
+        extra_attr = f' color="{FAVICON_MASK_COLOR}"' if rel == "mask-icon" else ""
+        tags.append(f'<link rel="{rel}"{mime_attr}{size_attr}{extra_attr} href="{href}">')
+    return tags
+
+
+def inject_brand_favicons(base_path: Path | None = None, emoji: str = "⚡️") -> None:
+    static_tags = _build_static_favicon_tags(base_path)
+    if static_tags:
+        st.markdown("\n".join(static_tags), unsafe_allow_html=True)
+        return
     codepoints = _emoji_codepoints(emoji)
     twemoji_svg = _twemoji_data_uri(codepoints, "svg")
     twemoji_png = _twemoji_data_uri(codepoints, "png")
@@ -404,7 +450,7 @@ def set_page_metadata() -> Dict[str, str]:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    inject_emoji_favicons("⚡️")
+    inject_brand_favicons(base_path, "⚡️")
 
     candidates = asset_search_paths("pokesearch_bg.jpeg", base_path)
     bg_image, bg_mime = _load_first_image_base64(candidates)

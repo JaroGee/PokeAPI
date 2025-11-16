@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" role="img" aria-label="PokéSearch lightning badge">
+  <defs>
+    <linearGradient id="badge-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffde00"/>
+      <stop offset="100%" stop-color="#f4a026"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#badge-bg)" stroke="#e29a07" stroke-width="3"/>
+  <circle cx="28" cy="20" r="13" fill="#fff" opacity="0.22"/>
+  <path d="M27 7.5L36 7.5L32.2 22.4L43.6 21.2L20.5 59L28.2 38.4L16.8 39.7Z" fill="#3b4cca" stroke="#1b2f78" stroke-width="2.8" stroke-linejoin="round"/>
+</svg>
