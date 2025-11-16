@@ -326,6 +326,7 @@ def build_entry_from_api(pokemon_id: int, name: str) -> Dict[str, object] | None
         "description": flavour or "",
         "sections": sections,
         "sprite": sprite_url,
+        "types": types,
         "metadata": metadata,
         "evolution_chain": evolution_chain,
     }

@@ -79,6 +79,91 @@ COLOR_PALETTE: Dict[str, str] = {
     "gold": "#b3a125",
 }
 
+POKEMON_OF_DAY_CSS = """
+<style>
+.poke-day-label {
+    font-size: 0.95rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666666;
+    margin-bottom: 0.15rem;
+}
+
+.poke-day-name {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #0057D9; /* match logo blue */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    margin-bottom: 0.35rem;
+}
+
+.type-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.type-chip {
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.80rem;
+    font-weight: 600;
+    color: #FFFFFF;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+</style>
+"""
+
+TYPE_COLORS: Dict[str, str] = {
+    "normal": "#A8A77A",
+    "fire": "#EE8130",
+    "water": "#6390F0",
+    "electric": "#F7D02C",
+    "grass": "#7AC74C",
+    "ice": "#96D9D6",
+    "fighting": "#C22E28",
+    "poison": "#A33EA1",
+    "ground": "#E2BF65",
+    "flying": "#A98FF3",
+    "psychic": "#F95587",
+    "bug": "#A6B91A",
+    "rock": "#B6A136",
+    "ghost": "#735797",
+    "dragon": "#6F35FC",
+    "dark": "#705746",
+    "steel": "#B7B7CE",
+    "fairy": "#D685AD",
+}
+
+
+def build_type_chips_html(types: Sequence[str] | None) -> str:
+    """Return HTML with <span> chips for each Pokémon type."""
+    spans = []
+    for t in types or []:
+        color = TYPE_COLORS.get(t.lower(), "#777777")
+        label = str(t).title()
+        spans.append(f'<span class="type-chip" style="background-color:{color};">{label}</span>')
+    return " ".join(spans)
+
+
+def render_pokemon_of_the_day(name: str, types: Sequence[str] | None, sprite_url: str | None) -> None:
+    safe_name = html.escape(name or "")
+    chips_html = build_type_chips_html(types)
+    chips_block = f'<div class="type-chip-row">{chips_html}</div>' if chips_html else ""
+    sprite_src = html.escape(sprite_url or "", quote=True)
+    sprite_block = (
+        f'<div class="pod-sprite"><img src="{sprite_src}" alt="{safe_name} sprite" /></div>' if sprite_url else ""
+    )
+    text_block = (
+        '<div class="pod-text">'
+        '<div class="poke-day-label">Pokémon of the Day</div>'
+        f'<div class="poke-day-name">{safe_name}</div>'
+        f"{chips_block}"
+        "</div>"
+    )
+    st.markdown(f'<div id="random-pokemon">{text_block}{sprite_block}</div>', unsafe_allow_html=True)
+
 GENERATION_FILTERS: Dict[str, tuple[int, int] | None] = {
     "all": None,
     "gen1": (1, 151),
@@ -214,7 +299,8 @@ def pokemon_of_the_day(seed: str | None = None) -> Dict[str, object] | None:
     if not entry:
         return None
     sprite = entry.get("sprite") or _pokemon_icon_url(entry["name"], pid if pid else None)
-    return {"id": pid, "name": entry["name"], "sprite": sprite}
+    types = entry.get("types") or []
+    return {"id": pid, "name": entry["name"], "sprite": sprite, "types": types}
 
 
 @st.cache_data(show_spinner=False)
@@ -1027,6 +1113,7 @@ def set_page_metadata() -> Dict[str, str]:
     </style>
     """
     st.markdown(custom_css, unsafe_allow_html=True)
+    st.markdown(POKEMON_OF_DAY_CSS, unsafe_allow_html=True)
     return {"pokeapi_logo": pokeapi_logo}
 
 
@@ -1410,18 +1497,7 @@ def main() -> None:
         pod = pokemon_of_the_day()
         if pod:
             sprite = pod.get("sprite") or _pokemon_icon_url(pod.get("name", ""), int(pod.get("id") or 0))
-            st.markdown(
-                f'''
-                <div id="random-pokemon">
-                  <div class="pod-label">
-                    <span>Pokémon of the Day</span>
-                    <strong>{html.escape(str(pod.get("name", "")))}</strong>
-                  </div>
-                  <img src="{sprite}" alt="{html.escape(str(pod.get("name", "")))} sprite" />
-                </div>
-                ''',
-                unsafe_allow_html=True,
-            )
+            render_pokemon_of_the_day(str(pod.get("name", "")), pod.get("types"), sprite)
             if st.button("View Stats", key="pod_cta"):
                 st.session_state["pending_lookup_id"] = pod.get("id")
                 st.session_state["force_search_query"] = pod.get("name", "")
