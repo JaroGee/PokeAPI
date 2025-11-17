@@ -118,8 +118,10 @@ POKEMON_OF_DAY_CSS = """
 POKE_SPRITE_CSS = """
 <style>
 /* Default = mobile-first: keep the pop-out vibe */
-.poke-day-sprite-wrapper { margin-top: 0.25rem; }
-.poke-day-sprite {
+.poke-day-sprite-wrapper {
+    margin-top: 0.25rem;
+}
+#random-pokemon .poke-day-sprite {
     display: block;
     height: auto;
     width: clamp(180px, 38vw, 280px);
@@ -129,24 +131,24 @@ POKE_SPRITE_CSS = """
 /* Desktop/laptop safety rules */
 @media (min-width: 1024px) {
     /* Reserve vertical space for the logo area and push sprite down */
-    :root { --logo-safe-zone: 64px; } /* tweak up to 80px if needed */
+    :root { --logo-safe-zone: 72px; } /* tweak up to 80px if needed */
 
-    .poke-day-sprite {
+    #random-pokemon .poke-day-sprite {
         /* Slightly smaller on desktop and moved DOWN so it clears the logo */
         width: clamp(180px, 22vw, 240px);
         transform: translateY(var(--logo-safe-zone));
         margin-top: 0.25rem;
         /* Cap tall sprites so mushrooms and birds don't eat the logo */
-        max-height: 240px;
+        max-height: 230px;
         height: auto;
-        /* If max-height kicks in, width will auto-scale with aspect ratio */
+        /* If max-height kicks in, width auto-scales with aspect ratio */
     }
 }
 
 /* Ultra-wide desktops can handle a touch more size without hitting the logo */
 @media (min-width: 1440px) {
-    :root { --logo-safe-zone: 72px; }
-    .poke-day-sprite {
+    :root { --logo-safe-zone: 80px; }
+    #random-pokemon .poke-day-sprite {
         width: clamp(190px, 20vw, 260px);
         max-height: 260px;
     }
