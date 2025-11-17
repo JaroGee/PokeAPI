@@ -115,6 +115,45 @@ POKEMON_OF_DAY_CSS = """
 </style>
 """
 
+POKE_SPRITE_CSS = """
+<style>
+/* Default = mobile-first: keep the pop-out vibe */
+.poke-day-sprite-wrapper { margin-top: 0.25rem; }
+.poke-day-sprite {
+    display: block;
+    height: auto;
+    width: clamp(180px, 38vw, 280px);
+    transform: translateY(-6px); /* tiny upward pop on mobile */
+}
+
+/* Desktop/laptop safety rules */
+@media (min-width: 1024px) {
+    /* Reserve vertical space for the logo area and push sprite down */
+    :root { --logo-safe-zone: 64px; } /* tweak up to 80px if needed */
+
+    .poke-day-sprite {
+        /* Slightly smaller on desktop and moved DOWN so it clears the logo */
+        width: clamp(180px, 22vw, 240px);
+        transform: translateY(var(--logo-safe-zone));
+        margin-top: 0.25rem;
+        /* Cap tall sprites so mushrooms and birds don't eat the logo */
+        max-height: 240px;
+        height: auto;
+        /* If max-height kicks in, width will auto-scale with aspect ratio */
+    }
+}
+
+/* Ultra-wide desktops can handle a touch more size without hitting the logo */
+@media (min-width: 1440px) {
+    :root { --logo-safe-zone: 72px; }
+    .poke-day-sprite {
+        width: clamp(190px, 20vw, 260px);
+        max-height: 260px;
+    }
+}
+</style>
+"""
+
 TYPE_COLORS: Dict[str, str] = {
     "normal": "#A8A77A",
     "fire": "#EE8130",
@@ -153,7 +192,11 @@ def render_pokemon_of_the_day(name: str, types: Sequence[str] | None, sprite_url
     chips_block = f'<div class="type-chip-row">{chips_html}</div>' if chips_html else ""
     sprite_src = html.escape(sprite_url or "", quote=True)
     sprite_block = (
-        f'<div class="pod-sprite"><img src="{sprite_src}" alt="{safe_name} sprite" /></div>' if sprite_url else ""
+        '<div class="pod-sprite">'
+        f'<div class="poke-day-sprite-wrapper"><img class="poke-day-sprite" src="{sprite_src}" alt="{safe_name}"></div>'
+        "</div>"
+        if sprite_url
+        else ""
     )
     text_block = (
         '<div class="pod-text">'
@@ -1114,6 +1157,7 @@ def set_page_metadata() -> Dict[str, str]:
     """
     st.markdown(custom_css, unsafe_allow_html=True)
     st.markdown(POKEMON_OF_DAY_CSS, unsafe_allow_html=True)
+    st.markdown(POKE_SPRITE_CSS, unsafe_allow_html=True)
     return {"pokeapi_logo": pokeapi_logo}
 
 
