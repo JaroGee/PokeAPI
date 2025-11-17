@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import base64
+import functools
 import html
+import json
 import random
-from datetime import datetime
-from io import BytesIO
 import re
 import unicodedata
+from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from typing import Callable, Dict, List, Sequence, Tuple, Set
-import functools
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -592,8 +594,42 @@ def _file_data_uri(path: Path) -> str | None:
     return f"data:{mime};base64,{encoded}"
 
 
-def _build_static_favicon_tags(base_path: Path | None = None) -> List[str]:
-    tags: List[str] = []
+def _inject_head_links(tags: Sequence[Dict[str, str]]) -> None:
+    if not tags:
+        return
+    payload = json.dumps(tags)
+    components.html(
+        f"""
+<script>
+(function() {{
+  const tags = {payload};
+  const doc = (window.parent && window.parent.document) || document;
+  const head = doc.head || doc.getElementsByTagName("head")[0];
+  if (!head) {{
+    return;
+  }}
+  const markAttr = "data-pokesearch-favicon";
+  head.querySelectorAll('link[' + markAttr + ']').forEach((node) => node.remove());
+  tags.forEach((attrs, idx) => {{
+    const link = doc.createElement("link");
+    link.setAttribute(markAttr, String(idx));
+    Object.entries(attrs).forEach(([key, value]) => {{
+      if (value) {{
+        link.setAttribute(key, value);
+      }}
+    }});
+    head.appendChild(link);
+  }});
+}})();
+</script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
+def _build_static_favicon_tags(base_path: Path | None = None) -> List[Dict[str, str]]:
+    tags: List[Dict[str, str]] = []
     for rel, mime, sizes, filename in FAVICON_FILES:
         path = resolve_asset_path(filename, base_path)
         if not path:
@@ -601,17 +637,21 @@ def _build_static_favicon_tags(base_path: Path | None = None) -> List[str]:
         href = _file_data_uri(path)
         if not href:
             continue
-        mime_attr = f' type="{mime}"' if mime else ""
-        size_attr = f' sizes="{sizes}"' if sizes else ""
-        extra_attr = f' color="{FAVICON_MASK_COLOR}"' if rel == "mask-icon" else ""
-        tags.append(f'<link rel="{rel}"{mime_attr}{size_attr}{extra_attr} href="{href}">')
+        tag: Dict[str, str] = {"rel": rel, "href": href}
+        if mime:
+            tag["type"] = mime
+        if sizes:
+            tag["sizes"] = sizes
+        if rel == "mask-icon":
+            tag["color"] = FAVICON_MASK_COLOR
+        tags.append(tag)
     return tags
 
 
 def inject_brand_favicons(base_path: Path | None = None, emoji: str = "⚡️") -> None:
     static_tags = _build_static_favicon_tags(base_path)
     if static_tags:
-        st.markdown("\n".join(static_tags), unsafe_allow_html=True)
+        _inject_head_links(static_tags)
         return
     codepoints = _emoji_codepoints(emoji)
     twemoji_svg = _twemoji_data_uri(codepoints, "svg")
@@ -621,14 +661,14 @@ def inject_brand_favicons(base_path: Path | None = None, emoji: str = "⚡️") 
     png16 = twemoji_png or _emoji_png_data_uri(emoji, 16)
     png32 = twemoji_png or _emoji_png_data_uri(emoji, 32)
     png180 = twemoji_png or _emoji_png_data_uri(emoji, 180)
-    tags = [f'<link rel="icon" type="image/svg+xml" href="{svg}">']
+    tags: List[Dict[str, str]] = [{"rel": "icon", "type": "image/svg+xml", "href": svg}]
     if png16:
-        tags.append(f'<link rel="icon" type="image/png" sizes="16x16" href="{png16}">')
+        tags.append({"rel": "icon", "type": "image/png", "sizes": "16x16", "href": png16})
     if png32:
-        tags.append(f'<link rel="icon" type="image/png" sizes="32x32" href="{png32}">')
+        tags.append({"rel": "icon", "type": "image/png", "sizes": "32x32", "href": png32})
     if png180:
-        tags.append(f'<link rel="apple-touch-icon" sizes="180x180" href="{png180}">')
-    st.markdown("\n".join(tags), unsafe_allow_html=True)
+        tags.append({"rel": "apple-touch-icon", "sizes": "180x180", "href": png180})
+    _inject_head_links(tags)
 
 
 def _load_first_image_base64(paths: Sequence[Path]) -> tuple[str | None, str]:
