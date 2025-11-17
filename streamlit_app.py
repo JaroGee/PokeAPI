@@ -83,78 +83,151 @@ POKEMON_OF_DAY_CSS = """
 <style>
 .poke-day-label {
     font-size: 0.95rem;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: #666666;
-    margin-bottom: 0.15rem;
 }
 
 .poke-day-name {
-    font-size: 2.2rem;
+    font-size: clamp(2rem, 4vw, 2.6rem);
     font-weight: 800;
     color: #0057D9; /* match logo blue */
     text-shadow: 0 2px 4px rgba(0,0,0,0.25);
-    margin-bottom: 0.35rem;
+    line-height: 1.1;
 }
 
 .type-chip-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-bottom: 0.75rem;
+    gap: 0.35rem;
+    margin-bottom: 0;
 }
 
 .type-chip {
-    padding: 0.2rem 0.6rem;
+    padding: 0.2rem 0.65rem;
     border-radius: 999px;
-    font-size: 0.80rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: #FFFFFF;
     text-shadow: 0 1px 2px rgba(0,0,0,0.35);
 }
-</style>
-"""
 
-POKE_SPRITE_CSS = """
-<style>
-/* Default = mobile-first: keep the pop-out vibe */
-.poke-day-sprite-wrapper {
-    margin-top: 0.25rem;
+#random-pokemon {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: clamp(0.65rem, 2.5vw, 2rem);
+    margin: 0.35rem 0 0.45rem;
+    padding: clamp(0.25rem, 1.1vw, 0.75rem) 0 clamp(0.35rem, 1vw, 0.85rem);
+    min-height: 180px;
 }
+
+#random-pokemon .pod-text {
+    flex: 1 1 220px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.45rem, 1vw, 0.9rem);
+}
+
+#random-pokemon .pod-title-block {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.95rem;
+}
+
+#random-pokemon .pod-info {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+#random-pokemon .pod-sprite {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+#random-pokemon .poke-day-sprite-wrapper {
+    margin-top: 0;
+}
+
 #random-pokemon .poke-day-sprite {
     display: block;
     height: auto;
-    width: clamp(180px, 38vw, 280px);
-    transform: translateY(-6px); /* tiny upward pop on mobile */
+    width: clamp(200px, 48vw, 320px);
+    max-height: clamp(190px, 36vh, 320px);
+    transform: translateX(clamp(8px, 2vw, 24px));
 }
 
-/* Desktop/laptop safety rules */
+@media (max-width: 640px) {
+    #random-pokemon {
+        align-items: flex-start;
+    }
+    #random-pokemon .pod-sprite {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    #random-pokemon .poke-day-sprite {
+        width: clamp(180px, 68vw, 320px);
+        max-height: clamp(200px, 45vh, 320px);
+        transform: translateX(0);
+    }
+}
+
+@media (min-width: 768px) {
+    #random-pokemon {
+        flex-wrap: nowrap;
+    }
+    #random-pokemon .poke-day-sprite {
+        width: clamp(220px, 34vw, 340px);
+        max-height: clamp(210px, 34vh, 330px);
+    }
+}
+
 @media (min-width: 1024px) {
-    /* Reserve vertical space for the logo area and push sprite down */
-    :root { --logo-safe-zone: 60px; } /* tweak within 56-80px range if needed */
-
+    #random-pokemon {
+        margin-top: 0.4rem;
+    }
     #random-pokemon .poke-day-sprite {
-        /* Slightly smaller on desktop and moved DOWN so it clears the logo */
-        width: clamp(175px, 21vw, 230px);
-        transform: translateY(var(--logo-safe-zone));
-        margin-top: 0.25rem;
-        /* Cap tall sprites so mushrooms and birds don't eat the logo */
-        max-height: 215px;
-        height: auto;
-        /* If max-height kicks in, width auto-scales with aspect ratio */
+        width: clamp(240px, 28vw, 360px);
+        max-height: 270px;
+        transform: translate(clamp(12px, 2.5vw, 32px), 6px);
     }
 }
 
-/* Ultra-wide desktops can handle a touch more size without hitting the logo */
 @media (min-width: 1440px) {
-    :root { --logo-safe-zone: 70px; }
     #random-pokemon .poke-day-sprite {
-        width: clamp(185px, 19vw, 245px);
-        max-height: 235px;
+        width: clamp(260px, 22vw, 380px);
+        max-height: 300px;
     }
+}
+
+#random-pokemon + div[data-testid="stButton"] {
+    width: fit-content;
+    margin: -0.2rem 0 0.9rem;
+}
+
+#random-pokemon + div[data-testid="stButton"] button {
+    background: var(--poke-yellow);
+    color: #111111;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 0.65rem 1.9rem;
+    border: 2px solid rgba(0,0,0,0.08);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+}
+
+#random-pokemon + div[data-testid="stButton"] button:hover {
+    background: #ffe76b;
 }
 </style>
 """
+
 
 TYPE_COLORS: Dict[str, str] = {
     "normal": "#A8A77A",
@@ -188,26 +261,29 @@ def build_type_chips_html(types: Sequence[str] | None) -> str:
     return " ".join(spans)
 
 
-def render_pokemon_of_the_day(name: str, types: Sequence[str] | None, sprite_url: str | None) -> None:
+def render_pokemon_of_the_day(name: str, types: Sequence[str] | None, sprite_url: str | None) -> bool:
     safe_name = html.escape(name or "")
     chips_html = build_type_chips_html(types)
     chips_block = f'<div class="type-chip-row">{chips_html}</div>' if chips_html else ""
     sprite_src = html.escape(sprite_url or "", quote=True)
     sprite_block = (
         '<div class="pod-sprite">'
-        f'<div class="poke-day-sprite-wrapper"><img class="poke-day-sprite" src="{sprite_src}" alt="{safe_name}"></div>'
+        f'<div class="poke-day-sprite-wrapper"><img class="poke-day-sprite" src="{sprite_src}" alt="{safe_name} sprite"></div>'
         "</div>"
         if sprite_url
         else ""
     )
     text_block = (
         '<div class="pod-text">'
-        '<div class="poke-day-label">Pokémon of the Day</div>'
+        '<div class="pod-title-block"><div class="poke-day-label">Pokémon of the Day</div></div>'
+        '<div class="pod-info">'
         f'<div class="poke-day-name">{safe_name}</div>'
         f"{chips_block}"
         "</div>"
+        "</div>"
     )
     st.markdown(f'<div id="random-pokemon">{text_block}{sprite_block}</div>', unsafe_allow_html=True)
+    return st.button("View Stats", key="pod_cta")
 
 GENERATION_FILTERS: Dict[str, tuple[int, int] | None] = {
     "all": None,
@@ -923,33 +999,10 @@ def set_page_metadata() -> Dict[str, str]:
         font-weight: 700;
         margin-bottom: 0.15rem;
       }}
-      #random-pokemon {{
-        height: 140px;
-        margin: 0.5rem auto 1rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.75rem;
-      }}
-      #random-pokemon img {{
-        max-height: 100%;
-        width: auto;
-      }}
-      #random-pokemon .pod-label {{
-        display: flex;
-        flex-direction: column;
-        font-weight: 700;
-        color: #3b4cca;
-      }}
       .pod-divider {{
         border-top: 2px solid #000000;
         margin: 0.75rem 0 1.25rem;
         width: 100%;
-      }}
-      @media (max-width: 640px) {{
-        #random-pokemon {{
-          height: 70px;
-        }}
       }}
       .pixel-icon {{
         border-radius: 18px;
@@ -1159,7 +1212,6 @@ def set_page_metadata() -> Dict[str, str]:
     """
     st.markdown(custom_css, unsafe_allow_html=True)
     st.markdown(POKEMON_OF_DAY_CSS, unsafe_allow_html=True)
-    st.markdown(POKE_SPRITE_CSS, unsafe_allow_html=True)
     return {"pokeapi_logo": pokeapi_logo}
 
 
@@ -1543,8 +1595,7 @@ def main() -> None:
         pod = pokemon_of_the_day()
         if pod:
             sprite = pod.get("sprite") or _pokemon_icon_url(pod.get("name", ""), int(pod.get("id") or 0))
-            render_pokemon_of_the_day(str(pod.get("name", "")), pod.get("types"), sprite)
-            if st.button("View Stats", key="pod_cta"):
+            if render_pokemon_of_the_day(str(pod.get("name", "")), pod.get("types"), sprite):
                 st.session_state["pending_lookup_id"] = pod.get("id")
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
