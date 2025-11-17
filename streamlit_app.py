@@ -122,7 +122,7 @@ def inject_pod_css() -> None:
         padding: 12px 8px 12px 8px;
         margin: 0;
         /* Protect the separator by reserving vertical space */
-        --pod-max-img-h: clamp(180px, 35vh, 360px);
+        --pod-max-img-h: clamp(140px, 26vh, 220px);
         --pod-gap: 10px;
         --pod-title-color: #666666;
         --pod-name-blue: #0057D9; /* match logo blue */
@@ -148,6 +148,22 @@ def inject_pod_css() -> None:
             grid-template-areas:
                 "title image"
                 "meta  image";
+        }
+        .pod-section {
+            --pod-max-img-h: clamp(130px, 22vh, 200px);
+        }
+        .pod-image img {
+            max-width: min(52vw, 260px);
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .pod-section {
+            --pod-max-img-h: clamp(110px, 18vh, 180px);
+        }
+        .pod-image img {
+            width: clamp(120px, 16vw, 180px);
+            max-height: clamp(110px, 18vh, 180px);
         }
     }
 
@@ -176,7 +192,7 @@ def inject_pod_css() -> None:
         height: auto;
         max-height: var(--pod-max-img-h);
         width: auto;
-        max-width: min(90vw, 520px);
+        max-width: min(75vw, 360px);
         filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25));
     }
 
