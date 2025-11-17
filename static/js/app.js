@@ -11,6 +11,7 @@ const historySummary = document.getElementById("history-summary");
 const PAGE_SIZE = 8;
 const MAX_HISTORY = 64;
 const PIXEL_ICON_SRC = window.PIXEL_ICON_SRC;
+const MOBILE_SCROLL_QUERY = "(max-width: 768px)";
 
 let debounceTimer;
 let searchHistory = [];
@@ -195,6 +196,16 @@ const renderHistory = () => {
   nextPageButton.disabled = currentPage >= totalPages - 1;
 };
 
+const autoScrollResults = () => {
+  if (!historyContainer || !window.matchMedia) return;
+  const isMobile = window.matchMedia(MOBILE_SCROLL_QUERY).matches;
+  if (!isMobile) return;
+  window.requestAnimationFrame(() => {
+    const top = historyContainer.getBoundingClientRect().top + window.scrollY - 16;
+    window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
+  });
+};
+
 const addToHistory = (group) => {
   searchHistory.unshift(group);
   if (searchHistory.length > MAX_HISTORY) {
@@ -202,6 +213,7 @@ const addToHistory = (group) => {
   }
   currentPage = 0;
   renderHistory();
+  autoScrollResults();
 };
 
 const performSearch = async () => {
