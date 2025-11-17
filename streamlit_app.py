@@ -8,7 +8,7 @@ from io import BytesIO
 import re
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple, Set
+from typing import Callable, Dict, List, Sequence, Tuple, Set
 import functools
 
 import requests
@@ -79,83 +79,6 @@ COLOR_PALETTE: Dict[str, str] = {
     "gold": "#b3a125",
 }
 
-POKEMON_OF_DAY_CSS = """
-<style>
-.poke-day-label {
-    font-size: 0.95rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #666666;
-    margin-bottom: 0.15rem;
-}
-
-.poke-day-name {
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: #0057D9; /* match logo blue */
-    text-shadow: 0 2px 4px rgba(0,0,0,0.25);
-    margin-bottom: 0.35rem;
-}
-
-.type-chip-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-bottom: 0.75rem;
-}
-
-.type-chip {
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.80rem;
-    font-weight: 600;
-    color: #FFFFFF;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-}
-</style>
-"""
-
-POKE_SPRITE_CSS = """
-<style>
-/* Default = mobile-first: keep the pop-out vibe */
-.poke-day-sprite-wrapper {
-    margin-top: 0.25rem;
-}
-#random-pokemon .poke-day-sprite {
-    display: block;
-    height: auto;
-    width: clamp(180px, 38vw, 280px);
-    transform: translateY(-6px); /* tiny upward pop on mobile */
-}
-
-/* Desktop/laptop safety rules */
-@media (min-width: 1024px) {
-    /* Reserve vertical space for the logo area and push sprite down */
-    :root { --logo-safe-zone: 60px; } /* tweak within 56-80px range if needed */
-
-    #random-pokemon .poke-day-sprite {
-        /* Slightly smaller on desktop and moved DOWN so it clears the logo */
-        width: clamp(175px, 21vw, 230px);
-        transform: translateY(var(--logo-safe-zone));
-        margin-top: 0.25rem;
-        /* Cap tall sprites so mushrooms and birds don't eat the logo */
-        max-height: 215px;
-        height: auto;
-        /* If max-height kicks in, width auto-scales with aspect ratio */
-    }
-}
-
-/* Ultra-wide desktops can handle a touch more size without hitting the logo */
-@media (min-width: 1440px) {
-    :root { --logo-safe-zone: 70px; }
-    #random-pokemon .poke-day-sprite {
-        width: clamp(185px, 19vw, 245px);
-        max-height: 235px;
-    }
-}
-</style>
-"""
-
 TYPE_COLORS: Dict[str, str] = {
     "normal": "#A8A77A",
     "fire": "#EE8130",
@@ -179,35 +102,168 @@ TYPE_COLORS: Dict[str, str] = {
 
 
 def build_type_chips_html(types: Sequence[str] | None) -> str:
-    """Return HTML with <span> chips for each Pokémon type."""
-    spans = []
+    spans: List[str] = []
     for t in types or []:
-        color = TYPE_COLORS.get(t.lower(), "#777777")
-        label = str(t).title()
-        spans.append(f'<span class="type-chip" style="background-color:{color};">{label}</span>')
-    return " ".join(spans)
+        label = str(t)
+        color = TYPE_COLORS.get(label.lower(), "#777777")
+        spans.append(
+            f'<span class="pod-chip" style="background-color:{color};">{html.escape(label.title())}</span>'
+        )
+    return "".join(spans)
 
 
-def render_pokemon_of_the_day(name: str, types: Sequence[str] | None, sprite_url: str | None) -> None:
+def inject_pod_css() -> None:
+    st.markdown(
+        """
+    <style>
+    /* Section wrapper */
+    .pod-section {
+        position: relative;
+        padding: 12px 8px 12px 8px;
+        margin: 0;
+        /* Protect the separator by reserving vertical space */
+        --pod-max-img-h: clamp(180px, 35vh, 360px);
+        --pod-gap: 10px;
+        --pod-title-color: #666666;
+        --pod-name-blue: #0057D9; /* match logo blue */
+    }
+
+    /* Two-column grid on tablet/desktop, single column on mobile */
+    .pod-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas:
+            "title"
+            "image"
+            "meta";
+        align-items: start;
+        gap: var(--pod-gap);
+    }
+
+    @media (min-width: 768px) {
+        .pod-grid {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            grid-template-areas:
+                "title image"
+                "meta  image";
+        }
+    }
+
+    /* Title: top-left */
+    .pod-title {
+        grid-area: title;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.95rem;
+        color: var(--pod-title-color);
+        align-self: start;
+        margin-top: 4px;
+    }
+
+    /* Image wrapper sits to the right column when wide */
+    .pod-image {
+        grid-area: image;
+        justify-self: center;
+        align-self: start;
+        /* Slight right bias even on desktop */
+        margin-left: 6%;
+    }
+
+    .pod-image img {
+        display: block;
+        height: auto;
+        max-height: var(--pod-max-img-h);
+        width: auto;
+        max-width: min(90vw, 520px);
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,0.25));
+    }
+
+    /* Meta block hugs the lower-left of the image area */
+    .pod-meta {
+        grid-area: meta;
+        align-self: end;
+        justify-self: start;
+        margin-top: 2px;
+    }
+
+    .pod-name {
+        font-size: clamp(1.6rem, 2.8vw, 2.2rem);
+        font-weight: 800;
+        line-height: 1.05;
+        color: var(--pod-name-blue);
+        text-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        margin: 0 0 6px 0;
+    }
+
+    .pod-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 12px 0;
+    }
+
+    .pod-chip {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #FFFFFF;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        white-space: nowrap;
+    }
+
+    /* Bigger stats button on its own line */
+    .pod-actions {
+        margin-top: 2px;
+    }
+    .pod-actions .stButton>button {
+        padding: 10px 18px;
+        font-weight: 700;
+        font-size: 0.98rem;
+        border-radius: 12px;
+    }
+
+    /* Ensure nothing crosses the separator:
+       Give the section a bottom margin so the tallest image never overlaps the line below.
+       Tune if needed after visual test. */
+    .pod-section {
+        margin-bottom: 18px;
+    }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_pokemon_of_the_day(
+    name: str,
+    types: Sequence[str] | None,
+    sprite_url: str | None,
+    on_view_stats: Callable[[], None] | None = None,
+) -> None:
     safe_name = html.escape(name or "")
-    chips_html = build_type_chips_html(types)
-    chips_block = f'<div class="type-chip-row">{chips_html}</div>' if chips_html else ""
     sprite_src = html.escape(sprite_url or "", quote=True)
-    sprite_block = (
-        '<div class="pod-sprite">'
-        f'<div class="poke-day-sprite-wrapper"><img class="poke-day-sprite" src="{sprite_src}" alt="{safe_name}"></div>'
-        "</div>"
-        if sprite_url
-        else ""
+    chips_html = build_type_chips_html(types)
+    st.markdown('<section class="pod-section"><div class="pod-grid">', unsafe_allow_html=True)
+    st.markdown('<div class="pod-title">Pokémon of the Day</div>', unsafe_allow_html=True)
+    image_markup = (
+        f'<div class="pod-image"><img src="{sprite_src}" alt="{safe_name}"></div>' if sprite_src else '<div class="pod-image"></div>'
     )
-    text_block = (
-        '<div class="pod-text">'
-        '<div class="poke-day-label">Pokémon of the Day</div>'
-        f'<div class="poke-day-name">{safe_name}</div>'
-        f"{chips_block}"
-        "</div>"
+    st.markdown(image_markup, unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="pod-meta"><div class="pod-name">{safe_name}</div><div class="pod-chips">{chips_html}</div></div>',
+        unsafe_allow_html=True,
     )
-    st.markdown(f'<div id="random-pokemon">{text_block}{sprite_block}</div>', unsafe_allow_html=True)
+    st.markdown("</div></section>", unsafe_allow_html=True)
+    c = st.container()
+    with c:
+        st.markdown('<div class="pod-actions">', unsafe_allow_html=True)
+        view = st.button("View Stats", key="pod_view_stats")
+        st.markdown("</div>", unsafe_allow_html=True)
+    if view and callable(on_view_stats):
+        on_view_stats()
 
 GENERATION_FILTERS: Dict[str, tuple[int, int] | None] = {
     "all": None,
@@ -923,33 +979,10 @@ def set_page_metadata() -> Dict[str, str]:
         font-weight: 700;
         margin-bottom: 0.15rem;
       }}
-      #random-pokemon {{
-        height: 140px;
-        margin: 0.5rem auto 1rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 0.75rem;
-      }}
-      #random-pokemon img {{
-        max-height: 100%;
-        width: auto;
-      }}
-      #random-pokemon .pod-label {{
-        display: flex;
-        flex-direction: column;
-        font-weight: 700;
-        color: #3b4cca;
-      }}
       .pod-divider {{
         border-top: 2px solid #000000;
         margin: 0.75rem 0 1.25rem;
         width: 100%;
-      }}
-      @media (max-width: 640px) {{
-        #random-pokemon {{
-          height: 70px;
-        }}
       }}
       .pixel-icon {{
         border-radius: 18px;
@@ -1158,8 +1191,7 @@ def set_page_metadata() -> Dict[str, str]:
     </style>
     """
     st.markdown(custom_css, unsafe_allow_html=True)
-    st.markdown(POKEMON_OF_DAY_CSS, unsafe_allow_html=True)
-    st.markdown(POKE_SPRITE_CSS, unsafe_allow_html=True)
+    inject_pod_css()
     return {"pokeapi_logo": pokeapi_logo}
 
 
@@ -1543,13 +1575,19 @@ def main() -> None:
         pod = pokemon_of_the_day()
         if pod:
             sprite = pod.get("sprite") or _pokemon_icon_url(pod.get("name", ""), int(pod.get("id") or 0))
-            render_pokemon_of_the_day(str(pod.get("name", "")), pod.get("types"), sprite)
-            if st.button("View Stats", key="pod_cta"):
+            def _handle_view_stats() -> None:
                 st.session_state["pending_lookup_id"] = pod.get("id")
                 st.session_state["force_search_query"] = pod.get("name", "")
                 st.session_state["search_prefill"] = pod.get("name", "")
                 st.session_state["enter_submit"] = True
                 st.rerun()
+
+            render_pokemon_of_the_day(
+                str(pod.get("name", "")),
+                list(pod.get("types") or []),
+                sprite or "",
+                on_view_stats=_handle_view_stats,
+            )
         st.markdown('<div class="pod-divider"></div>', unsafe_allow_html=True)
         with st.container():
             pending_lookup_id = st.session_state.get("pending_lookup_id")
