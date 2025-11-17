@@ -2,6 +2,7 @@ const form = document.querySelector(".search-card");
 const searchInput = document.getElementById("search-input");
 const suggestionsList = document.getElementById("suggestions");
 const historyContainer = document.getElementById("results");
+const historyPanel = document.querySelector(".history-panel");
 const categoryFilter = document.getElementById("category-filter");
 const randomButton = document.getElementById("random-button");
 const prevPageButton = document.getElementById("prev-page");
@@ -11,6 +12,8 @@ const historySummary = document.getElementById("history-summary");
 const PAGE_SIZE = 8;
 const MAX_HISTORY = 64;
 const PIXEL_ICON_SRC = window.PIXEL_ICON_SRC;
+const MOBILE_SCROLL_QUERY = "(max-width: 768px)";
+const MOBILE_SCROLL_BREAKPOINT = 768;
 
 let debounceTimer;
 let searchHistory = [];
@@ -195,6 +198,19 @@ const renderHistory = () => {
   nextPageButton.disabled = currentPage >= totalPages - 1;
 };
 
+const autoScrollResults = () => {
+  if (!historyPanel) return;
+  const matchesQuery = window.matchMedia ? window.matchMedia(MOBILE_SCROLL_QUERY).matches : false;
+  const isMobile = matchesQuery || window.innerWidth <= MOBILE_SCROLL_BREAKPOINT;
+  if (!isMobile) return;
+  if (document.activeElement === searchInput) {
+    searchInput.blur();
+  }
+  window.requestAnimationFrame(() => {
+    historyPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+};
+
 const addToHistory = (group) => {
   searchHistory.unshift(group);
   if (searchHistory.length > MAX_HISTORY) {
@@ -202,6 +218,7 @@ const addToHistory = (group) => {
   }
   currentPage = 0;
   renderHistory();
+  autoScrollResults();
 };
 
 const performSearch = async () => {
