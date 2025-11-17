@@ -112,20 +112,6 @@ POKEMON_OF_DAY_CSS = """
     color: #FFFFFF;
     text-shadow: 0 1px 2px rgba(0,0,0,0.35);
 }
-
-.poke-day-sprite-wrapper img {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    width: clamp(180px, 34vw, 270px);
-}
-
-@media (min-width: 1024px) {
-    .poke-day-sprite-wrapper img {
-        width: 215px;
-        transform: translate(24px, 8px);
-    }
-}
 </style>
 """
 
@@ -167,9 +153,7 @@ def render_pokemon_of_the_day(name: str, types: Sequence[str] | None, sprite_url
     chips_block = f'<div class="type-chip-row">{chips_html}</div>' if chips_html else ""
     sprite_src = html.escape(sprite_url or "", quote=True)
     sprite_block = (
-        f'<div class="pod-sprite"><div class="poke-day-sprite-wrapper"><img src="{sprite_src}" alt="{safe_name} sprite" /></div></div>'
-        if sprite_url
-        else ""
+        f'<div class="pod-sprite"><img src="{sprite_src}" alt="{safe_name} sprite" /></div>' if sprite_url else ""
     )
     text_block = (
         '<div class="pod-text">'
