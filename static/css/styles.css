@@ -253,6 +253,7 @@ body {
   gap: 1.5rem;
   overflow-y: auto;
   padding-right: 0.25rem;
+  scroll-margin-top: 80px;
 }
 
 .history-group {
