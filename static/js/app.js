@@ -2,6 +2,7 @@ const form = document.querySelector(".search-card");
 const searchInput = document.getElementById("search-input");
 const suggestionsList = document.getElementById("suggestions");
 const historyContainer = document.getElementById("results");
+const resultsPanel = document.getElementById("results");
 const categoryFilter = document.getElementById("category-filter");
 const randomButton = document.getElementById("random-button");
 const prevPageButton = document.getElementById("prev-page");
@@ -11,10 +12,51 @@ const historySummary = document.getElementById("history-summary");
 const PAGE_SIZE = 8;
 const MAX_HISTORY = 64;
 const PIXEL_ICON_SRC = window.PIXEL_ICON_SRC;
+const MOBILE_SCROLL_WIDTH = 768;
+const MOBILE_SCROLL_OFFSET = 80;
+const MOBILE_SCROLL_DELAY_MS = 80;
 
 let debounceTimer;
 let searchHistory = [];
 let currentPage = 0;
+
+const isMobileViewport = () => {
+  if (typeof window === "undefined") {
+    console.debug("[auto-scroll] window unavailable");
+    return false;
+  }
+  const width = window.innerWidth || (document.documentElement ? document.documentElement.clientWidth : 0) || 0;
+  const matchesMedia =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia(`(max-width: ${MOBILE_SCROLL_WIDTH}px)`).matches
+      : false;
+  const isMobile = width <= MOBILE_SCROLL_WIDTH || matchesMedia;
+  console.debug("[auto-scroll] isMobileViewport", { width, isMobile });
+  return isMobile;
+};
+
+const scrollResultsIntoViewIfMobile = () => {
+  if (!isMobileViewport()) return;
+  if (!resultsPanel) return;
+  if (
+    document.activeElement &&
+    typeof document.activeElement.blur === "function"
+  ) {
+    document.activeElement.blur();
+  }
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const rect = resultsPanel.getBoundingClientRect();
+      const scrollTop =
+        window.pageYOffset ||
+        (document.documentElement ? document.documentElement.scrollTop : 0) ||
+        0;
+      const targetY = Math.max(scrollTop + rect.top - MOBILE_SCROLL_OFFSET, 0);
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+      console.debug("[auto-scroll] scrollResultsIntoViewIfMobile", targetY);
+    }, MOBILE_SCROLL_DELAY_MS);
+  });
+};
 
 const debounce = (fn, delay = 200) => {
   return (...args) => {
@@ -202,6 +244,7 @@ const addToHistory = (group) => {
   }
   currentPage = 0;
   renderHistory();
+  scrollResultsIntoViewIfMobile();
 };
 
 const performSearch = async () => {
