@@ -7,70 +7,70 @@ const randomButton = document.getElementById("random-button");
 const prevPageButton = document.getElementById("prev-page");
 const nextPageButton = document.getElementById("next-page");
 const historySummary = document.getElementById("history-summary");
+const backToTopButton = document.getElementById("back-to-top");
 
 const PAGE_SIZE = 8;
 const MAX_HISTORY = 64;
 const PIXEL_ICON_SRC = window.PIXEL_ICON_SRC;
 const MOBILE_VIEWPORT_MAX_WIDTH = 768;
-const MOBILE_SCROLL_DELAY_MS = 120;
+const DEFAULT_SCROLL_DELAY_MS = 120;
 
 let debounceTimer;
+let scrollTimerId;
 let searchHistory = [];
 let currentPage = 0;
-let resultsPanel = null;
-
-const initScrollHelpers = () => {
-  resultsPanel = document.querySelector("#results");
-  if (!resultsPanel) {
-    console.warn("[scroll] #results not found in DOM");
-  } else {
-    console.info("[scroll] resultsPanel initialized", resultsPanel);
-  }
-};
 
 const isMobileViewport = () => {
-  if (typeof window === "undefined") {
-    console.info("[scroll] window unavailable");
-    return false;
-  }
-  const width =
-    window.innerWidth ||
-    (document.documentElement ? document.documentElement.clientWidth : 0) ||
-    0;
-  const matchesMedia =
-    typeof window.matchMedia === "function"
-      ? window.matchMedia(`(max-width: ${MOBILE_VIEWPORT_MAX_WIDTH}px)`).matches
-      : false;
-  const isMobile = width > 0 && width <= MOBILE_VIEWPORT_MAX_WIDTH || matchesMedia;
-  console.info("[scroll] isMobileViewport?", { width, isMobile });
-  return isMobile;
+  if (typeof window === "undefined") return false;
+  return window.innerWidth <= MOBILE_VIEWPORT_MAX_WIDTH;
 };
 
-const scrollResultsIntoViewIfMobile = () => {
-  if (!isMobileViewport()) return;
-  if (!resultsPanel) {
-    console.warn("[scroll] resultsPanel missing, skip auto scroll");
+const scrollToTop = () => {
+  if (typeof window === "undefined") return;
+  try {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (error) {
+    window.scrollTo(0, 0);
+  }
+};
+
+const scrollResultsIntoViewIfNeeded = () => {
+  if (!historyContainer) {
+    console.warn("[scroll] #results container missing; cannot auto scroll");
     return;
   }
-  if (document.activeElement && typeof document.activeElement.blur === "function") {
-    document.activeElement.blur();
+
+  const active = document.activeElement;
+  if (active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)) {
+    active.blur();
   }
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      console.info("[scroll] scrolling resultsPanel into view");
-      if (typeof resultsPanel.scrollIntoView === "function") {
-        resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-      } else {
-        const rect = resultsPanel.getBoundingClientRect();
-        const scrollTop =
-          window.pageYOffset ||
-          (document.documentElement ? document.documentElement.scrollTop : 0) ||
-          0;
-        const targetY = Math.max(scrollTop + rect.top - 80, 0);
-        window.scrollTo({ top: targetY, behavior: "smooth" });
-      }
-    }, MOBILE_SCROLL_DELAY_MS);
-  });
+
+  window.clearTimeout(scrollTimerId);
+  const delay = isMobileViewport() ? DEFAULT_SCROLL_DELAY_MS : 90;
+  scrollTimerId = window.setTimeout(() => {
+    try {
+      historyContainer.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+      return;
+    } catch (error) {
+      console.warn("[scroll] scrollIntoView unavailable; falling back", error);
+    }
+
+    const rect = historyContainer.getBoundingClientRect();
+    const currentOffset =
+      window.pageYOffset ||
+      (document.documentElement ? document.documentElement.scrollTop : 0) ||
+      0;
+    const targetY = Math.max(currentOffset + rect.top, 0);
+    try {
+      window.scrollTo({ top: targetY, behavior: "smooth" });
+    } catch (error) {
+      window.scrollTo(0, targetY);
+    }
+  }, delay);
 };
 
 const debounce = (fn, delay = 200) => {
@@ -259,8 +259,7 @@ const addToHistory = (group) => {
   }
   currentPage = 0;
   renderHistory();
-  console.info("[scroll] addToHistory complete, triggering auto scroll");
-  scrollResultsIntoViewIfMobile();
+  scrollResultsIntoViewIfNeeded();
 };
 
 const performSearch = async () => {
@@ -344,10 +343,11 @@ nextPageButton.addEventListener("click", () => {
   }
 });
 
-renderHistory();
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initScrollHelpers);
-} else {
-  initScrollHelpers();
+if (backToTopButton) {
+  backToTopButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    scrollToTop();
+  });
 }
+
+renderHistory();
